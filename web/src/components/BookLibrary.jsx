@@ -4,7 +4,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { LLink, useLang } from '../i18n/LangContext.jsx';
 import { fetchBooks, backendReady } from '../lib/supabase.js';
-import { IBook, ISearch } from './icons.jsx';
+import { IBook, IDoc, ISearch } from './icons.jsx';
 import './BookLibrary.css';
 
 const BOARDS = ['KPK', 'Punjab', 'Federal', 'Sindh', 'Balochistan'];
@@ -28,22 +28,35 @@ function prettyName(fileTitle) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function BookCard({ book }) {
+/* One card per entry. Books keep the dark book-cover look; past papers get a
+   light paper-sheet look (ruled lines + folded corner + document icon) so the
+   two pages never look the same. */
+function BookCard({ book, kind }) {
   const { t } = useLang();
   const L = t.library;
   const hue = subjectHue(book.subject);
   const url = `/read/${book.id}`;
+  const isPaper = kind === 'paper';
   return (
     <article className="book-card">
-      <div
-        className="book-cover"
-        style={{ background: `linear-gradient(135deg, hsl(${hue}, 45%, 32%), hsl(${(hue + 40) % 360}, 55%, 22%))` }}
-        aria-hidden
-      >
-        <span className="book-spine" />
-        <span className="book-emblem"><IBook size={40} /></span>
-        <span className="book-class-tag">{book.class_level}</span>
-      </div>
+      {isPaper ? (
+        <div className="paper-cover" aria-hidden>
+          <span className="paper-lines" />
+          <span className="paper-fold" />
+          <span className="paper-emblem"><IDoc size={40} /></span>
+          <span className="paper-tag">{L.hub.pastPapers}</span>
+        </div>
+      ) : (
+        <div
+          className="book-cover"
+          style={{ background: `linear-gradient(135deg, hsl(${hue}, 45%, 32%), hsl(${(hue + 40) % 360}, 55%, 22%))` }}
+          aria-hidden
+        >
+          <span className="book-spine" />
+          <span className="book-emblem"><IBook size={40} /></span>
+          <span className="book-class-tag">{book.class_level}</span>
+        </div>
+      )}
       <div className="book-body">
         <h3>{book.title || prettyName(book.drive_file_id)}</h3>
         <div className="book-meta">
@@ -195,7 +208,7 @@ export default function BookLibrary({ kind }) {
         </div>
       ) : (
         <div className="lib-grid">
-          {visible.map((b) => <BookCard key={b.id} book={b} />)}
+          {visible.map((b) => <BookCard key={b.id} book={b} kind={kind} />)}
         </div>
       )}
     </div>

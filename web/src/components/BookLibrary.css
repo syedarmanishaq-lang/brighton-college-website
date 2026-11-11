@@ -130,6 +130,65 @@
   letter-spacing: 0.02em;
 }
 
+/* Past-paper card: a light sheet of paper, not a book cover. Same height as
+   .book-cover so the grid rows stay aligned. The paper stays light even in
+   dark mode — that is the point, it looks like a real sheet of paper. */
+.paper-cover {
+  position: relative;
+  height: 148px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fffdf4, #f4eeda);
+  border-bottom: 1px solid var(--line);
+}
+.paper-lines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 21px,
+    rgba(15, 39, 69, 0.09) 21px 22px
+  );
+}
+.paper-fold {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
+  width: 0;
+  height: 0;
+  border-top: 30px solid #d9cfab;
+  border-inline-start: 30px solid transparent;
+  filter: drop-shadow(-2px 2px 2px rgba(15, 39, 69, 0.18));
+  z-index: 1;
+}
+.paper-emblem {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  padding: 10px;
+  background: #fff;
+  color: var(--navy-900);
+  border: 1.5px solid var(--navy-900);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(15, 39, 69, 0.18);
+}
+.paper-tag {
+  position: absolute;
+  top: 12px;
+  inset-inline-start: 12px;
+  background: var(--navy-900);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  z-index: 2;
+}
+
 .book-body {
   padding: 16px 16px 18px;
   display: flex;
