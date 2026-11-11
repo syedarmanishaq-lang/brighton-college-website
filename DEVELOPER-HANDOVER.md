@@ -25,7 +25,7 @@ Values that ship inside the code itself (Supabase anon key, Drive API key) are i
 
 ## 2. Repositories and accounts (info only, no passwords)
 
-- **GitHub repo:** `brightoncollege-alt/brighton-college-website`, branch `main`.
+- **GitHub repo:** `syedarmanishaq-lang/brighton-college-website`, branch `main` (transferred from `brightoncollege-alt` 2026-11-11).
   Normal `git push` deploys to Vercel. Local checkout: `~/workspace/brighton-college`,
   app code in `web/`.
 - **Vercel:** account `techshazal-6636`. Framework preset Vite, build `npm run build`,
@@ -160,8 +160,11 @@ npm run build    # production build -> dist/ (prebuild runs the sitemap script)
 ## 9. Open work (2026-11-11)
 
 - Buy the Hostinger domain → custom domain on Pages → Search Console move.
-- Connect GitHub to Cloudflare Pages for auto-deploy (GitHub App install on
-  `brightoncollege-alt`, then recreate the Pages project as Git-connected).
+- Connect GitHub to Cloudflare Pages for auto-deploy (GitHub App installed on
+  `syedarmanishaq-lang`, installation 180884987; Cloudflare-side link still
+  pending — error 8000011 on every attempt, phone + API. Pages is direct-upload
+  for now; deploy manually with `pages_deploy.py` after each push. Vercel
+  auto-deploys from GitHub as before).
 - Ads on Brighton: the owner will put ads on; network (Monetag vs AdSense) undecided.
 - Admin panel proposals awaiting the owner's pick: WhatsApp/Call buttons per
   enquiry, gallery organiser, books manager tab, news preview + date picker,
