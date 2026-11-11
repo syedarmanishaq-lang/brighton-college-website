@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import Header from './components/Header.jsx';
 import Footer from './components/Footer.jsx';
@@ -34,9 +34,29 @@ import { ADMIN_PANEL_PATH } from './config.js';
 
 const AdminApp = lazy(() => import('./admin/AdminApp.jsx'));
 
+/* Offline bar: when the phone loses internet, say so plainly — the page
+   still opens (service worker + saved data), but what it shows is the
+   last saved content, not fresh updates. */
+function OfflineBar() {
+  const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const dn = () => setOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', dn);
+    return () => {
+      window.removeEventListener('online', up);
+      window.removeEventListener('offline', dn);
+    };
+  }, []);
+  if (online) return null;
+  return <div className="offline-bar" role="status">You are offline — showing saved content. New updates will appear when you are back online.</div>;
+}
+
 function SiteChrome() {
   return (
     <>
+      <OfflineBar />
       <a className="skip-link" href="#main">Skip to content</a>
       <Header />
       <main id="main">

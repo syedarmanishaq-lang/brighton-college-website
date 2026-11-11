@@ -45,24 +45,48 @@ function Counter({ to, plain }) {
   return <span ref={ref}>{plain ? String(val) : val.toLocaleString('en-US')}</span>;
 }
 
+import { cacheFresh, cacheSet } from '../lib/cache.js';
+
+/* Public reads cache: 5 minutes. Repeat visits render instantly from the
+   last saved list; a fresh fetch runs behind it. Offline visits show the
+   saved list instead of an empty page. */
+const NEWS_TTL_MS = 5 * 60 * 1000;
+
 function useTicker() {
-  const [items, setItems] = useState([]);
   const { college } = useCollege();
+  const key = `ticker:${(college && college.id) || 'all'}`;
+  const [items, setItems] = useState(() => cacheFresh(key, NEWS_TTL_MS) || []);
   useEffect(() => {
     if (!backendReady()) return;
-    fetchTickerNotices(college && college.id).then(setItems).catch(() => {});
-  }, [college]);
+    /* Re-check the cache for the current key: the college id swaps from
+       the local id to the real UUID once the background row lands. */
+    const cached = cacheFresh(key, NEWS_TTL_MS);
+    if (cached) setItems(cached);
+    fetchTickerNotices(college && college.id)
+      .then((r) => { setItems(r || []); cacheSet(key, r || []); })
+      .catch(() => {});
+  }, [college]); // eslint-disable-line react-hooks/exhaustive-deps
   return items;
 }
 
 function useNews(limit) {
-  const [items, setItems] = useState([]);
   const { college } = useCollege();
+  const key = `news:${limit}:${(college && college.id) || 'all'}`;
+  const [items, setItems] = useState(() => cacheFresh(key, NEWS_TTL_MS) || []);
+  const [loading, setLoading] = useState(() => cacheFresh(key, NEWS_TTL_MS) === null);
   useEffect(() => {
-    if (!backendReady()) return;
-    fetchNews(limit, college && college.id).then((r) => setItems(r || [])).catch(() => {});
-  }, [limit, college]);
-  return items;
+    if (!backendReady()) { setLoading(false); return; }
+    let alive = true;
+    /* Re-check the cache for the current key (see useTicker note). */
+    const cached = cacheFresh(key, NEWS_TTL_MS);
+    if (cached) { setItems(cached); setLoading(false); }
+    fetchNews(limit, college && college.id)
+      .then((r) => { if (!alive) return; setItems(r || []); cacheSet(key, r || []); })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [limit, college]); // eslint-disable-line react-hooks/exhaustive-deps
+  return { items, loading };
 }
 
 function readTime(text) {
@@ -124,7 +148,7 @@ export default function Home() {
   const { t, lang } = useLang();
   const site = useSite();
   const tickerItems = useTicker();
-  const news = useNews(4);
+  const { items: news, loading: newsLoading } = useNews(4);
   /* Honest admissions state: live pinned notices win; otherwise the
      fallback reflects the admin's admissions_open switch (default CLOSED). */
   const admissionsOpen = useAdmissionsOpen();
@@ -254,7 +278,9 @@ export default function Home() {
             </div>
             <LLink className="btn btn-outline" to="/news">{t.browseAllNews}</LLink>
           </div>
-          {newsOnly.length === 0 ? (
+          {newsLoading ? (
+            <div className="loading">Loading news…</div>
+          ) : newsOnly.length === 0 ? (
             <div className="empty">
               <div className="big" aria-hidden><IBook size={44} /></div>
               <h3>{t.homeNews.emptyTitle}</h3>

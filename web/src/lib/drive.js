@@ -3,6 +3,7 @@
    Needs DRIVE_API_KEY + DRIVE_FOLDER_ID in config.js. Returns [] when the
    key is missing so the UI can show its "coming soon" state. */
 import { DRIVE_API_KEY, DRIVE_FOLDER_ID } from '../config.js';
+import { cacheFresh, cacheSet, cacheClear } from './cache.js';
 
 export function driveReady() {
   return !!DRIVE_API_KEY && !!DRIVE_FOLDER_ID;
@@ -200,13 +201,26 @@ const CACHE_TTL_MS = 10 * 60 * 1000;
 const _cache = {}; // folderId -> { at, files }
 
 export function clearDriveCache(folderId) {
-  if (folderId) delete _cache[folderId];
-  else Object.keys(_cache).forEach((k) => delete _cache[k]);
+  if (folderId) {
+    delete _cache[folderId];
+    cacheClear('drive:' + folderId);
+  } else {
+    Object.keys(_cache).forEach((k) => delete _cache[k]);
+    cacheClear('drive:');
+  }
 }
 
 export async function driveListAll(folderId, { orderBy = 'name' } = {}) {  if (!driveReady()) return [];
   const cached = _cache[folderId];
   if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.files;
+  /* SPEED + OFFLINE: the list also lives in localStorage, so repeat
+     visits (and offline visits) show the saved library instantly
+     instead of waiting on the Drive API again. */
+  const stored = cacheFresh('drive:' + folderId, CACHE_TTL_MS);
+  if (stored) {
+    _cache[folderId] = { at: Date.now(), files: stored };
+    return stored;
+  }
 
   const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
   let files = [];
@@ -226,5 +240,6 @@ export async function driveListAll(folderId, { orderBy = 'name' } = {}) {  if (!
     if (!pageToken) break;
   }
   _cache[folderId] = { at: Date.now(), files };
+  cacheSet('drive:' + folderId, files);
   return files;
 }

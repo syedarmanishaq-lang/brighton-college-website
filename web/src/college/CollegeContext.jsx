@@ -10,6 +10,12 @@ import { LLink } from '../i18n/LangContext.jsx';
 import { SITE } from '../config.js';
 import { getLocalCollege, DEFAULT_COLLEGE_SLUG } from '../data/colleges.js';
 import { backendReady, fetchCollegeBySlug } from '../lib/supabase.js';
+import { cacheFresh, cacheSet } from '../lib/cache.js';
+
+/* College row cache: 1 hour. The row rarely changes; the cache makes
+   repeat (and offline) visits render with the real UUID instantly. */
+const COLLEGE_TTL_MS = 60 * 60 * 1000;
+const collegeKey = (slug) => `college:${slug}`;
 
 /* Map a DB `colleges` row onto the local college shape. */
 export function mapCollegeRow(r) {
@@ -61,35 +67,49 @@ export function useSite() {
 }
 
 export function CollegeProvider({ slug, children }) {
+  /* SPEED: render instantly from the local registry (pixel-identical for
+     Brighton) or a cached Supabase row. The live row is fetched in the
+     background and swapped in when it arrives — the page never waits on
+     the network for its first paint, and works offline from the cache.
+     Unknown slugs still go through the loading → not-found path. */
   const [state, setState] = useState(() => {
     const local = getLocalCollege(slug);
-    // With a live backend, ALWAYS resolve from Supabase: the local entry's
-    // id ('local-brighton') is not a UUID, and UUID-scoped queries
-    // (news/results/ticker/contact) fail on it, leaving public pages empty.
-    // Local is only the offline fallback (backend not ready).
-    if (!backendReady()) {
-      return local
-        ? { college: local, status: 'ready' }
-        : { college: null, status: 'not-found' };
+    if (local) return { college: local, status: 'ready' };
+    if (!backendReady()) return { college: null, status: 'not-found' };
+    const cached = cacheFresh(collegeKey(slug), COLLEGE_TTL_MS);
+    if (cached) {
+      const college = mapCollegeRow(cached);
+      if (college) return { college, status: 'ready' };
     }
     return { college: null, status: 'loading' };
   });
 
   useEffect(() => {
     let alive = true;
-    if (!backendReady()) {
-      const local = getLocalCollege(slug);
-      setState(local ? { college: local, status: 'ready' } : { college: null, status: 'not-found' });
-      return;
+    const local = getLocalCollege(slug);
+    if (local) setState({ college: local, status: 'ready' });
+    else if (!backendReady()) setState({ college: null, status: 'not-found' });
+    else {
+      const cached = cacheFresh(collegeKey(slug), COLLEGE_TTL_MS);
+      const college = cached ? mapCollegeRow(cached) : null;
+      setState(college ? { college, status: 'ready' } : { college: null, status: 'loading' });
     }
-    setState({ college: null, status: 'loading' });
+    if (!backendReady()) return;
+    /* Background upgrade: swap in the real row (with the UUID the
+       scoped news/results queries need) when it arrives. */
     fetchCollegeBySlug(slug)
       .then((row) => {
         if (!alive) return;
         const college = mapCollegeRow(row);
-        setState(college ? { college, status: 'ready' } : { college: null, status: 'not-found' });
+        if (college) {
+          cacheSet(collegeKey(slug), row);
+          setState({ college, status: 'ready' });
+        } else if (!getLocalCollege(slug)) {
+          setState({ college: null, status: 'not-found' });
+        }
+        /* Local entry exists but no DB row: keep showing local. */
       })
-      .catch(() => { if (alive) setState({ college: null, status: 'not-found' }); });
+      .catch(() => { /* offline / backend down: keep local or cached */ });
     return () => { alive = false; };
   }, [slug]);
 
