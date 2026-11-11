@@ -52,14 +52,15 @@ import { cacheFresh, cacheSet } from '../lib/cache.js';
    saved list instead of an empty page. */
 const NEWS_TTL_MS = 5 * 60 * 1000;
 
+/* Cache keys use the college SLUG (stable from the first paint), not the
+   UUID: the UUID only arrives after the background college fetch, so a
+   UUID key made every full reload miss the cache and re-fetch news. */
 function useTicker() {
   const { college } = useCollege();
-  const key = `ticker:${(college && college.id) || 'all'}`;
+  const key = `ticker:${(college && college.slug) || 'all'}`;
   const [items, setItems] = useState(() => cacheFresh(key, NEWS_TTL_MS) || []);
   useEffect(() => {
     if (!backendReady()) return;
-    /* Re-check the cache for the current key: the college id swaps from
-       the local id to the real UUID once the background row lands. */
     const cached = cacheFresh(key, NEWS_TTL_MS);
     if (cached) setItems(cached);
     fetchTickerNotices(college && college.id)
@@ -71,13 +72,12 @@ function useTicker() {
 
 function useNews(limit) {
   const { college } = useCollege();
-  const key = `news:${limit}:${(college && college.id) || 'all'}`;
+  const key = `news:${limit}:${(college && college.slug) || 'all'}`;
   const [items, setItems] = useState(() => cacheFresh(key, NEWS_TTL_MS) || []);
   const [loading, setLoading] = useState(() => cacheFresh(key, NEWS_TTL_MS) === null);
   useEffect(() => {
     if (!backendReady()) { setLoading(false); return; }
     let alive = true;
-    /* Re-check the cache for the current key (see useTicker note). */
     const cached = cacheFresh(key, NEWS_TTL_MS);
     if (cached) { setItems(cached); setLoading(false); }
     fetchNews(limit, college && college.id)
