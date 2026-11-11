@@ -16,6 +16,7 @@ import { mapCollegeRow } from '../college/CollegeContext.jsx';
 import { getLocalCollege, knownLocalSlugs, DEFAULT_COLLEGE_SLUG } from '../data/colleges.js';
 import { NEWS_CATEGORIES, TEST_TYPES, CLASS_LEVELS, FILE_TYPES, PROGRAMS } from '../data/college.js';
 import { clearDriveCache } from '../lib/drive.js';
+import { uploadToR2, driveImageUrl } from '../lib/r2upload.js';
 import { getSetting, setSetting, getSettingByKey, setSettingByKey } from '../lib/settings.js';
 
 /* Tables scoped to a college — admin writes stamp the active college_id. */
@@ -198,11 +199,19 @@ const Sel = ({ v, on, opts }) => (
   </select>
 );
 
-/* Image upload field: uploads to a Supabase Storage bucket and stores the
-   public URL in the record. The URL-paste box stays as a fallback. */
+/* Image field — three sources, one stored URL:
+   - R2 (default): uploads through the Cloudflare Worker to the R2 bucket
+     (fast, free 10GB) — the browser never holds R2 credentials.
+   - Drive: paste a Drive share link or file ID — the file must be shared
+     "Anyone with the link can view".
+   - Supabase: the original Storage-bucket upload.
+   The stored value is always just a public URL, so the public pages
+   render R2 / Drive / Supabase photos exactly the same way. */
 function ImageUpload({ bucket, value, onChange, label }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [mode, setMode] = useState('r2'); // 'r2' | 'drive' | 'supabase'
+  const [driveInput, setDriveInput] = useState('');
 
   async function pick(e) {
     const f = e.target.files && e.target.files[0];
@@ -211,35 +220,75 @@ function ImageUpload({ bucket, value, onChange, label }) {
     setBusy(true);
     setMsg('');
     try {
-      const url = await uploadImage(bucket, f);
+      const url = mode === 'r2' ? await uploadToR2(f, bucket) : await uploadImage(bucket, f);
       onChange(url);
-      setMsg('✅ Uploaded — image saved.');
+      setMsg(mode === 'r2' ? '✅ Uploaded to R2 — image saved.' : '✅ Uploaded — image saved.');
     } catch (err) {
       setMsg('⚠️ ' + err.message);
     }
     setBusy(false);
   }
 
+  function useDriveLink() {
+    const url = driveImageUrl(driveInput);
+    if (!url) {
+      setMsg('⚠️ That Drive link was not recognised — paste the share link or the file ID.');
+      return;
+    }
+    onChange(url);
+    setMsg('✅ Drive photo linked — make sure the file is shared "Anyone with the link".');
+  }
+
+  const modes = [
+    ['r2', '☁️ R2 upload'],
+    ['drive', 'Drive link'],
+    ['supabase', 'Supabase upload'],
+  ];
   return (
     <div>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <label className="btn btn-outline" style={{ cursor: busy ? 'wait' : 'pointer' }}>
-          {busy ? 'Uploading…' : '📤 Upload image'}
-          <input type="file" accept="image/*" hidden disabled={busy} onChange={pick} />
-        </label>
-        {value ? (
-          <a href={value} target="_blank" rel="noreferrer">
-            <img src={value} alt={label || 'uploaded'} style={{ height: 46, borderRadius: 8, border: '1px solid var(--line)' }} />
-          </a>
-        ) : (
-          <span className="muted sm">No image yet</span>
-        )}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+        {modes.map(([m, t]) => (
+          <button key={m} type="button" className="chip" onClick={() => { setMode(m); setMsg(''); }}
+            style={mode === m ? { background: 'var(--navy-900)', color: '#fff', borderColor: 'var(--navy-900)' } : undefined}>
+            {t}
+          </button>
+        ))}
       </div>
+      {mode === 'drive' ? (
+        <div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input value={driveInput} onChange={(e) => setDriveInput(e.target.value)}
+              placeholder="Paste Drive share link or file ID" style={{ flex: 1 }} disabled={busy} />
+            <button type="button" className="btn btn-outline" onClick={useDriveLink} disabled={busy}>Use link</button>
+          </div>
+          <div className="muted sm" style={{ marginTop: 4 }}>
+            The Drive file must be shared "Anyone with the link can view".
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <label className="btn btn-outline" style={{ cursor: busy ? 'wait' : 'pointer' }}>
+            {busy ? 'Uploading…' : '📤 Upload image'}
+            <input type="file" accept="image/*" hidden disabled={busy} onChange={pick} />
+          </label>
+          {value ? (
+            <a href={value} target="_blank" rel="noreferrer">
+              <img src={value} alt={label || 'uploaded'} style={{ height: 46, borderRadius: 8, border: '1px solid var(--line)' }} />
+            </a>
+          ) : (
+            <span className="muted sm">No image yet</span>
+          )}
+        </div>
+      )}
       <input value={value || ''} onChange={(e) => onChange(e.target.value)}
         placeholder="…or paste an image URL" style={{ marginTop: 8 }} />
       {msg && <div className="sm" style={{ marginTop: 6 }}>{msg}</div>}
       <div className="muted sm" style={{ marginTop: 4 }}>
-        JPG / PNG, max {MAX_UPLOAD_MB}MB — stored in the <b>{bucket}</b> bucket.
+        JPG / PNG, max {MAX_UPLOAD_MB}MB — {mode === 'r2'
+          ? <>stored in <b>Cloudflare R2</b> (brighton-college-media).</>
+          : mode === 'drive'
+            ? <>linked from <b>Google Drive</b> (no upload).</>
+            : <>stored in the <b>{bucket}</b> Supabase bucket.</>}
       </div>
     </div>
   );
@@ -300,13 +349,16 @@ function Crud({ title, table, columns, rows, loading, reload, onChanged, college
   }
 
   async function del(row) {
-    const hasFile = !!(fileField && row[fileField]);
-    if (!(await ask(hasFile
+    const fileUrl = fileField ? row[fileField] : null;
+    /* Only Supabase Storage files are actually removed with the row —
+       R2 / Drive links stay where they are (their hosts own them). */
+    const removesFile = !!(fileUrl && String(fileUrl).includes('/storage/v1/object/public/'));
+    if (!(await ask(removesFile
       ? 'Delete this entry?\n\nIts uploaded file will also be removed from storage to free space.'
       : 'Delete this entry?'))) return;
     try {
-      await adminDeleteWithStorage(table, row.id, fileField ? row[fileField] : null);
-      say('Deleted — entry' + (hasFile ? ' and its file' : '') + ' removed. ✅');
+      await adminDeleteWithStorage(table, row.id, fileUrl);
+      say('Deleted — entry' + (removesFile ? ' and its file' : '') + ' removed. ✅');
       reload(); onChanged && onChanged();
     }
     catch (e) { say('Delete failed: ' + e.message, 'err'); }

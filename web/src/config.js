@@ -33,6 +33,14 @@ export const BACKEND_LIVE = true;
 
 export const ADMIN_PANEL_PATH = '/adminsecuresex/';
 
+/* Cloudflare R2 — gallery / news / result photos.
+   The admin panel uploads images through the brighton-upload Worker
+   (it checks the admin password hash and writes to the R2 bucket
+   brighton-college-media); the browser never holds R2 credentials.
+   R2_PUBLIC_URL is where uploaded photos are served from. */
+export const R2_UPLOAD_URL = 'https://brighton-upload.syedarmanishaq.workers.dev/';
+export const R2_PUBLIC_URL = 'https://pub-657f762b08ff455cb0cff1c7f48b2217.r2.dev';
+
 /* Countdown to the next admission/event deadline (homepage + admissions).
    Set `date` to an ISO date like '2026-08-15T09:00:00+05:00' to show it;
    leave empty ('') and the countdown hides itself. Auto-hides after the date. */
