@@ -70,6 +70,11 @@ function Login({ onOk }) {
       if (!stored) stored = localStorage.getItem(PW_KEY);
       const ok = hash === stored;
       if (ok) {
+        /* Keep the verified hash in this browser: the R2 upload sends
+           this same value to the Worker, so a stale setup-time hash
+           must never linger here (it made every R2 upload fail with
+           "Wrong admin password" even right after a good sign-in). */
+        try { localStorage.setItem(PW_KEY, hash); } catch {}
         sessionStorage.setItem(SESSION_KEY, '1');
         onOk();
       } else {
