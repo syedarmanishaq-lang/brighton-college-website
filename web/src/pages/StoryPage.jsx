@@ -37,6 +37,10 @@ export default function StoryPage() {
     .filter(Boolean)
     .slice(0, 3);
 
+  /* Story photos are temporarily unavailable: the 34 local photos were
+     blurry brochure-scan crops (194–309 px) and were removed on
+     2026-11-20. The story text stays; photos return when the college
+     brings originals. No ImageObject schema while there are no photos. */
   const schemaExtra = [
     {
       '@type': 'Article',
@@ -46,14 +50,7 @@ export default function StoryPage() {
       author: { '@type': 'Organization', name: 'The Brighton College' },
       publisher: { '@type': 'Organization', name: 'The Brighton College' },
       mainEntityOfPage: base + path,
-      image: story.photos.map((p) => base + p.src),
     },
-    ...story.photos.map((p) => ({
-      '@type': 'ImageObject',
-      contentUrl: base + p.src,
-      caption: lang === 'ur' ? p.capUr : p.cap,
-      creditText: 'The Brighton College',
-    })),
   ];
 
   return (
@@ -75,23 +72,16 @@ export default function StoryPage() {
 
       <section className="section">
         <div className="container">
-          <figure className="story-hero">
-            <img src={story.photos[0].src}
-              alt={lang === 'ur' ? story.photos[0].capUr : story.photos[0].cap} />
-            <figcaption>{lang === 'ur' ? story.photos[0].capUr : story.photos[0].cap}</figcaption>
-          </figure>
+          <div className="empty" style={{ marginBottom: 30 }}>
+            <div className="big" aria-hidden><ISearch size={44} /></div>
+            <h3>{lang === 'ur' ? 'تصاویر جلد آ رہی ہیں' : 'Photos coming soon'}</h3>
+            <p>{lang === 'ur'
+              ? 'اس کہانی کی اصل تصاویر جلد شامل کی جائیں گی — نیچے کہانی پڑھیں۔'
+              : 'Original photos for this story will be added soon — read the story below.'}</p>
+          </div>
 
           <div className="prose" style={{ maxWidth: 760 }}>
             {L.body.map((para, i) => <p key={i}>{para}</p>)}
-          </div>
-
-          <div className="gallery-grid" style={{ marginTop: 30 }}>
-            {story.photos.slice(1).map((p, i) => (
-              <div className="g-item" key={i}>
-                <img src={p.src} alt={lang === 'ur' ? p.capUr : p.cap} loading="lazy" />
-                <div className="g-cap">{lang === 'ur' ? p.capUr : p.cap}</div>
-              </div>
-            ))}
           </div>
 
           {related.length > 0 && (
@@ -104,9 +94,6 @@ export default function StoryPage() {
                   const rl = r[lang] || r.en;
                   return (
                     <LLink key={r.slug} to={`/gallery/${r.slug}`} className="news-card">
-                      <div className="news-card-img">
-                        <img src={r.photos[0].src} alt={rl.title} loading="lazy" />
-                      </div>
                       <div className="news-card-body">
                         <h3>{rl.title}</h3>
                         <p className="muted sm">{rl.excerpt}</p>
