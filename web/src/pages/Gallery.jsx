@@ -3,8 +3,16 @@ import { LLink, useLang } from '../i18n/LangContext.jsx';
 import { useCollege, useSite } from '../college/CollegeContext.jsx';
 
 import { fetchGallery, fetchGalleryImages, backendReady } from '../lib/supabase.js';
+import { cacheFresh, cacheSet } from '../lib/cache.js';
 import { driveDownloadUrl } from '../lib/drive.js';
 import Seo from '../seo/Seo.jsx';
+
+/* Public reads cache: 5 minutes (same pattern as News). Repeat visits
+   render instantly from the last saved list; a fresh fetch runs only
+   when the cache is stale. Key uses the college SLUG, not the UUID.
+   The cache lives in this public component only — admin lists use the
+   same fetch functions and always fetch live. */
+const GALLERY_TTL_MS = 5 * 60 * 1000;
 
 /* Grid thumbs are small (220px cards) — w400 is plenty. The lightbox /
    full view keeps w1000. Never use lh3 thumbnailLinks (403 anonymous). */
@@ -93,12 +101,15 @@ function GalleryVideo({ item, onClose }) {
 export default function Gallery() {
   const { t, lang } = useLang();
   const { college } = useCollege();
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = `gallery:all:${(college && college.slug) || 'all'}`;
+  const [items, setItems] = useState(() => cacheFresh(cacheKey, GALLERY_TTL_MS) || []);
+  const [loading, setLoading] = useState(() => cacheFresh(cacheKey, GALLERY_TTL_MS) === null);
   const [light, setLight] = useState(null);
 
   useEffect(() => {
     if (!backendReady()) { setItems(DEFAULT_GALLERY); setLoading(false); return; }
+    const cached = cacheFresh(cacheKey, GALLERY_TTL_MS);
+    if (cached) { setItems(cached); setLoading(false); return; } // fresh cache: no re-fetch
     Promise.all([
       fetchGallery(college && college.id).catch(() => []),
       fetchGalleryImages(college && college.id).catch(() => []),
@@ -128,7 +139,9 @@ export default function Gallery() {
         description: '',
       }));
       const combined = [...uploadedMapped, ...driveMapped];
-      setItems(combined.length ? combined : DEFAULT_GALLERY);
+      const shown = combined.length ? combined : DEFAULT_GALLERY;
+      setItems(shown);
+      cacheSet(cacheKey, shown);
     }).catch(() => setItems(DEFAULT_GALLERY)).finally(() => setLoading(false));
   }, [college]);
 
