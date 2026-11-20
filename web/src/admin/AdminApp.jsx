@@ -718,9 +718,13 @@ function GallerySection({ collegeId, notify }) {
   );
 }
 
-function MessagesSection({ collegeId, notify }) {
+function MessagesSection({ collegeId, notify, onUnread }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  /* Read/unread state lives in site_settings key 'messages_read' (a JSON
+     list of message ids) — no schema change needed, and it works on
+     every device the admin signs in from. */
+  const [readIds, setReadIds] = useState([]);
   const { ask, dialog } = useConfirm();
   const reload = () => {
     setLoading(true);
@@ -728,28 +732,63 @@ function MessagesSection({ collegeId, notify }) {
       .then((r) => setRows(r || [])).catch(() => setRows([])).finally(() => setLoading(false));
   };
   useEffect(reload, [collegeId]);
+  useEffect(() => {
+    getSettingByKey('messages_read', '[]')
+      .then((v) => { try { setReadIds(JSON.parse(v || '[]')); } catch { setReadIds([]); } })
+      .catch(() => setReadIds([]));
+  }, []);
+  const unreadCount = rows.filter((r) => !readIds.includes(r.id)).length;
+  useEffect(() => { onUnread && onUnread(unreadCount); }, [unreadCount, onUnread]);
+  const setRead = async (id, read) => {
+    const next = read ? [...new Set([...readIds, id])] : readIds.filter((x) => x !== id);
+    setReadIds(next);
+    try { await setSettingByKey('messages_read', JSON.stringify(next)); } catch {}
+  };
+  const markAllRead = async () => {
+    const next = rows.map((r) => r.id);
+    setReadIds(next);
+    try { await setSettingByKey('messages_read', JSON.stringify(next)); } catch {}
+    notify && notify('All messages marked as read.');
+  };
   return (
     <div>
       {dialog}
-      <div className="adm-head"><h2>Contact Messages</h2>
-        <button className="btn btn-outline" onClick={reload}>↻ Refresh</button></div>
+      <div className="adm-head"><h2>Contact Messages {unreadCount > 0 && <span className="tag" style={{ background: '#e05252', color: '#fff' }}>{unreadCount} unread</span>}</h2>
+        <span style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-outline" onClick={markAllRead} disabled={unreadCount === 0}>✓ Mark all read</button>
+          <button className="btn btn-outline" onClick={reload}>↻ Refresh</button>
+        </span></div>
       {loading ? <div className="loading">Loading…</div> : (
         <div className="table-wrap"><table className="data">
           <thead><tr><th>Date</th><th>Name</th><th>Phone</th><th>Message</th><th></th></tr></thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
+            {rows.map((r) => {
+              const unread = !readIds.includes(r.id);
+              return (
+              <tr key={r.id} style={unread ? { background: '#fff8e1' } : {}}>
                 <td>{new Date(r.created_at).toLocaleDateString()}</td>
-                <td><b>{r.name}</b></td><td>{r.phone}</td>
+                <td><b>{r.name}</b>{unread && <><br /><span className="tag" style={{ background: '#e05252', color: '#fff' }}>New</span></>}</td>
+                <td>{r.phone}</td>
                 <td style={{ maxWidth: 340 }}>{r.message}</td>
-                <td><button className="chip chip-danger" onClick={async () => {
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  {waLink(r.phone) && (
+                    <a className="chip" href={waLink(r.phone)} target="_blank" rel="noreferrer"
+                      style={{ textDecoration: 'none', background: '#e7f6ec', borderColor: '#bfe6c9', color: '#157347' }}>
+                      💬 Reply on WhatsApp
+                    </a>
+                  )}{' '}
+                  <button className="chip" onClick={() => setRead(r.id, unread)}>
+                    {unread ? 'Mark read' : 'Mark unread'}
+                  </button>{' '}
+                  <button className="chip chip-danger" onClick={async () => {
                   if (!(await ask('Delete this message?'))) return;
                   adminDelete('contact_messages', r.id)
                     .then(() => { notify && notify('Message deleted. ✅'); reload(); })
                     .catch((e) => notify && notify('Delete failed: ' + e.message, 'err'));
                 }}>Delete</button></td>
               </tr>
-            ))}
+              );
+            })}
             {rows.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)' }}>No messages.</td></tr>}
           </tbody>
         </table></div>
@@ -828,6 +867,7 @@ export default function AdminApp() {
   const [authed, setAuthed] = useState(() => sessionStorage.getItem(SESSION_KEY) === '1');
   const [tab, setTab] = useState('news');
   const [counts, setCounts] = useState(null);
+  const [unreadMsg, setUnreadMsg] = useState(0);
   const [toasts, setToasts] = useState([]);
   const notify = useCallback((msg, kind) => {
     const id = Date.now() + Math.random();
@@ -905,6 +945,7 @@ export default function AdminApp() {
             <button key={key} className={'adm-tab' + (tab === key ? ' on' : '')} onClick={() => setTab(key)}>
               {label}
               {key === 'admissions' && counts && counts.newApps > 0 && <span className="adm-badge">{counts.newApps}</span>}
+              {key === 'messages' && unreadMsg > 0 && <span className="adm-badge">{unreadMsg}</span>}
             </button>
           ))}
         </nav>
@@ -932,7 +973,7 @@ export default function AdminApp() {
         {tab === 'material' && <MaterialSection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'admissions' && <AdmissionsSection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'gallery' && <GallerySection collegeId={activeCollegeId} notify={notify} />}
-        {tab === 'messages' && <MessagesSection collegeId={activeCollegeId} notify={notify} />}
+        {tab === 'messages' && <MessagesSection collegeId={activeCollegeId} notify={notify} onUnread={setUnreadMsg} />}
         {tab === 'settings' && <SettingsSection collegeId={activeCollegeId} notify={notify} />}
       </main>
       <Toasts items={toasts} />
