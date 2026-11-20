@@ -7,7 +7,7 @@
    og:site_name is always "The Brighton College" (SITE NAME RULE). */
 import { useEffect } from 'react';
 import { useLang } from '../i18n/LangContext.jsx';
-import { useCollege, useSite } from '../college/CollegeContext.jsx';
+import { useCollege } from '../college/CollegeContext.jsx';
 import { SITE_URL } from '../config.js';
 import { SEO_PAGES, FAQ_ITEMS } from './seoStrings.js';
 
@@ -56,7 +56,6 @@ function setJsonLd(id, obj) {
 export default function Seo({ page = 'home', article = null, faq = false, pathOverride = null, extra = null, seoTitle = null, seoDesc = null, ogImage = null }) {
   const { lang } = useLang();
   const { slug: collegeSlug } = useCollege();
-  const site = useSite();
 
   useEffect(() => {
     const s = (SEO_PAGES[page] && SEO_PAGES[page][lang]) || SEO_PAGES.home[lang] || SEO_PAGES.home.en;
@@ -99,38 +98,12 @@ export default function Seo({ page = 'home', article = null, faq = false, pathOv
     upsertLink('alternate', urlUr, 'ur');
     upsertLink('alternate', urlEn, 'x-default');
 
-    // JSON-LD: WebSite (always)
-    setJsonLd('website', {
-      '@context': 'https://schema.org',
-      '@type': 'WebSite',
-      name: SITE_NAME,
-      url: base + '/',
-      inLanguage: ['en', 'ur'],
-    });
-
-    // JSON-LD: CollegeOrUniversity (home page)
-    if (page === 'home') {
-      setJsonLd('college', {
-        '@context': 'https://schema.org',
-        '@type': 'CollegeOrUniversity',
-        name: site.name || 'THE BRIGHTON COLLEGE',
-        alternateName: 'The Brighton College of Science',
-        slogan: site.tagline,
-        url: base + '/',
-        email: site.email,
-        foundingDate: '2023-05-01',
-        address: {
-          '@type': 'PostalAddress',
-          streetAddress: 'KKS Plaza, Main Mardan Swabi Road, Shewa Adda, Near Police Station, Kalu Khan',
-          addressLocality: 'Swabi',
-          addressRegion: 'Khyber Pakhtunkhwa',
-          addressCountry: 'PK',
-        },
-        telephone: ['+92-317-9609048', '+92-314-9649602'],
-      });
-    } else {
-      setJsonLd('college', null);
-    }
+    // JSON-LD: WebSite + CollegeOrUniversity are NOT emitted here — the
+    // static blocks in web/index.html are the single source of truth
+    // (crawlers without JS see them). Emitting them here too produced two
+    // conflicting copies. Seo.jsx keeps only page-specific blocks.
+    setJsonLd('website', null);
+    setJsonLd('college', null);
 
     // JSON-LD: BreadcrumbList
     const crumbs = [
@@ -165,7 +138,7 @@ export default function Seo({ page = 'home', article = null, faq = false, pathOv
         description: desc,
         datePublished: article.published_at,
         author: { '@type': 'Organization', name: SITE_NAME },
-        publisher: { '@type': 'Organization', name: SITE_NAME },
+        publisher: { '@type': 'Organization', name: SITE_NAME, logo: { '@type': 'ImageObject', url: base + '/logo-crest.png' } },
         mainEntityOfPage: url,
       };
       if (article.image) art.image = [article.image];
@@ -182,7 +155,7 @@ export default function Seo({ page = 'home', article = null, faq = false, pathOv
     } else {
       setJsonLd('extra', null);
     }
-  }, [page, lang, collegeSlug, article, faq, pathOverride, extra, site, seoTitle, seoDesc, ogImage]);
+  }, [page, lang, collegeSlug, article, faq, pathOverride, extra, seoTitle, seoDesc, ogImage]);
 
   return null;
 }

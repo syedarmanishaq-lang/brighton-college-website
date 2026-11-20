@@ -43,8 +43,13 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@brightoncollege" />
     <meta name="theme-color" content="#0A1B33" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Favicon order matters: Google Search does NOT support SVG favicons,
+         so the raster PNG crest comes FIRST (browsers take the first match
+         they support); the SVG "B" is kept last as a fallback only. -->
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -62,7 +67,8 @@
       "name": "THE BRIGHTON COLLEGE",
       "alternateName": "The Brighton College of Science",
       "slogan": "Brighten Your Future in Brighton",
-      "url": "https://www.thebrightoncollege.org/",
+      "url": "https://brightoniankpk.com/",
+      "logo": "https://brightoniankpk.com/logo-crest.png",
       "email": "infothebrightoncollege@gmail.com",
       "foundingDate": "2023-05-01",
       "address": {
@@ -80,7 +86,7 @@
       "@context": "https://schema.org",
       "@type": "WebSite",
       "name": "The Brighton College",
-      "url": "https://www.thebrightoncollege.org/",
+      "url": "https://brightoniankpk.com/",
       "inLanguage": ["en", "ur"]
     }
     </script>
