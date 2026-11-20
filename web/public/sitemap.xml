@@ -138,6 +138,14 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://brightoniankpk.com/brighton/en/developer</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://brightoniankpk.com/brighton/en/developer"/>
+    <xhtml:link rel="alternate" hreflang="ur" href="https://brightoniankpk.com/brighton/ur/developer"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://brightoniankpk.com/brighton/en/developer"/>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://brightoniankpk.com/brighton/en/gallery/sports-gala</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://brightoniankpk.com/brighton/en/gallery/sports-gala"/>
     <xhtml:link rel="alternate" hreflang="ur" href="https://brightoniankpk.com/brighton/ur/gallery/sports-gala"/>

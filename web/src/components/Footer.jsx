@@ -32,6 +32,7 @@ export default function Footer() {
               <li><LLink to="/programs">{t.footer.programs}</LLink></li>
               <li><LLink to="/admissions">{t.footer.admissions}</LLink></li>
               <li><LLink to="/gallery">{t.footer.gallery}</LLink></li>
+              <li><LLink to="/developer">Developer</LLink></li>
             </ul>
           </div>
           <div>

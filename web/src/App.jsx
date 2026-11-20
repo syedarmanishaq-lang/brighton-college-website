@@ -27,6 +27,7 @@ import Contact from './pages/Contact.jsx';
 import Install from './pages/Install.jsx';
 import Privacy from './pages/Privacy.jsx';
 import Terms from './pages/Terms.jsx';
+import Developer from './pages/Developer.jsx';
 import { LangProvider, LANGS, storedLang } from './i18n/LangContext.jsx';
 import { CollegeProvider, CollegeNotFoundPage, useCollege } from './college/CollegeContext.jsx';
 import { DEFAULT_COLLEGE_SLUG, getLocalCollege } from './data/colleges.js';
@@ -83,6 +84,7 @@ function SiteChrome() {
           <Route path="/install" element={<Install />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/developer" element={<Developer />} />
           <Route path="*" element={<Navigate to=".." replace />} />
         </Routes>
       </main>
@@ -137,7 +139,7 @@ function CollegeRoute() {
 /* Known public page slugs — flat legacy URLs (/about) redirect to their
    canonical /:college/:lang/:slug form instead of 404ing. */
 const PAGE_SLUGS = ['about', 'programs', 'admissions', 'news', 'results',
-  'material', 'courses', 'gallery', 'faculty', 'contact', 'privacy', 'terms'];
+  'material', 'courses', 'gallery', 'faculty', 'contact', 'privacy', 'terms', 'developer'];
 
 /* Single-segment URLs: /en, /brighton, /about (legacy), or an unknown slug. */
 function SingleSegRoute() {

@@ -153,6 +153,16 @@ export const SEO_PAGES = {
       desc: 'دی برائٹن کالج، صوابی کی پرائیویسی پالیسی — داخلہ اور رابطہ فارم سے آپ کی معلومات کیسے لی اور محفوظ کی جاتی ہیں۔',
     },
   },
+  developer: {
+    en: {
+      title: 'Meet the Developer — Arman Ishaq | The Brighton College',
+      desc: 'Meet Arman Ishaq, the developer of The Brighton College website — full website development, Android apps, software, frontend, backend and SEO for clients in the UK, USA and Canada.',
+    },
+    ur: {
+      title: 'Meet the Developer — Arman Ishaq | The Brighton College',
+      desc: 'Meet Arman Ishaq, the developer of The Brighton College website — full website development, Android apps, software, frontend, backend and SEO for clients in the UK, USA and Canada.',
+    },
+  },
   install: {
     en: {
       title: 'Install the App | The Brighton College',
