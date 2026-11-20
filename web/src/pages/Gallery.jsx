@@ -22,7 +22,10 @@ const DRIVE_FULL = (id) => `https://drive.google.com/thumbnail?id=${id}&sz=w1000
 const DRIVE_UC = (id) => `https://drive.google.com/uc?export=download&id=${id}`;
 
 /* Two videos open on a black frame, so Drive's poster thumbnail is a
-   black box — use a related real college photo for those two instead. */
+   black box — the grid shows a real video frame instead (VideoPoster).
+   These overrides survive only as the lightbox poster and as the
+   VideoPoster error fallback; they are NOT grid thumbnails any more,
+   so the photos are no longer shown twice under two captions. */
 const VIDEO_THUMB_OVERRIDE = {
   '1uWkavYa8PI1RsFVj1dIjVZh1OnRzLHJl': DRIVE_THUMB('1m2WFVran1pLgVobiH5LIK-gWHxPGFeBz'),
   '1tixCpPe3WDZ0xTe8UKpaF_SUs05ikMum': DRIVE_THUMB('1QdxTT3QaqwsuS71eK0EI7uLBgrMY0jFM'),
@@ -94,6 +97,53 @@ function GalleryVideo({ item, onClose }) {
       <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 14px', background: 'var(--navy-950)' }}>
         <button type="button" className="btn btn-outline-light" onClick={onClose} style={{ minHeight: 40 }}>Close ×</button>
       </div>
+    </div>
+  );
+}
+
+/* Grid poster for a video whose own Drive thumbnail is a black frame
+   (the video fades in from black, so drive.google.com/thumbnail returns
+   a ~1KB all-black image). The old fix borrowed a gallery photo as the
+   poster — which showed the SAME photo twice in the grid, once as the
+   photo "Our Dedicated Teachers" / "Faculty Excellence" and once as the
+   video thumb. Instead the card now shows a real frame from the video
+   itself: a muted <video> seeking to t=3s via a media fragment
+   (Drive alt=media supports range requests, same stream the lightbox
+   player uses). Mounted only when scrolled into view, so nothing
+   streams on page load; on any stream error it falls back to the photo
+   thumb. Only the two black-thumb videos use this — the other videos'
+   own Drive thumbnails are real frames and stay as <img>. */
+function VideoPoster({ item }) {
+  const ref = React.useRef(null);
+  const [inView, setInView] = useState(false);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') { setInView(true); return; }
+    const io = new IntersectionObserver((es) => {
+      if (es.some((e) => e.isIntersecting)) { setInView(true); io.disconnect(); }
+    }, { rootMargin: '200px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  const posterStyle = { width: '100%', height: 220, objectFit: 'cover', borderRadius: 8, display: 'block' };
+  if (failed) {
+    return <img src={item.thumb || item.src} alt={item.caption} loading="lazy" decoding="async" style={posterStyle} />;
+  }
+  return (
+    <div ref={ref}>
+      {inView ? (
+        <video
+          src={`${driveDownloadUrl(item.drive_file_id)}#t=3`}
+          muted playsInline preload="metadata" disablePictureInPicture
+          role="img" aria-label={item.caption}
+          style={{ ...posterStyle, background: '#000' }}
+          onLoadedMetadata={(e) => { const v = e.currentTarget; if (v.currentTime < 2.5) { try { v.currentTime = 3; } catch {} } }}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <div style={{ ...posterStyle, background: 'var(--navy-950, #0a1c33)' }} aria-hidden="true" />
+      )}
     </div>
   );
 }
@@ -175,13 +225,17 @@ export default function Gallery() {
               <div className="g-item" key={m.id} onClick={() => setLight(m)} style={{ cursor: 'pointer' }}>
                 {m.type === 'video' ? (
                   <div style={{ position: 'relative' }}>
-                    <img src={m.thumb || m.src} alt={m.caption} loading="lazy" style={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
+                    {VIDEO_THUMB_OVERRIDE[m.drive_file_id] ? (
+                      <VideoPoster item={m} />
+                    ) : (
+                      <img src={m.thumb || m.src} alt={m.caption} loading="lazy" decoding="async" style={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
+                    )}
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: '#fff' }}>▶</div>
                     </div>
                   </div>
                 ) : (
-                  <img src={m.src || m.image_url} alt={m.caption} loading="lazy" />
+                  <img src={m.src || m.image_url} alt={m.caption} loading="lazy" decoding="async" />
                 )}
                 {m.caption && <div className="g-cap">{m.caption}</div>}
               </div>
