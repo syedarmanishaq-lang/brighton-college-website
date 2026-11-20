@@ -16,6 +16,21 @@ import { IVideo, ISearch } from '../components/icons.jsx';
 /* lh3 thumbnailLinks 403 for anonymous visitors — treat them as missing. */
 const isDeadThumb = (u) => !u || u.indexOf('lh3.googleusercontent.com') !== -1;
 
+/* The Drive course index holds TWO different folders for 9 titles (the
+   source library was copied twice, so the same course exists under two
+   folder IDs). The folders and index rows stay untouched — the listing
+   shows each title once (first row wins) and the count reflects unique
+   courses. Key = display title, trimmed + lowercased + whitespace-folded. */
+const dedupeByTitle = (list, titleOf) => {
+  const seen = new Set();
+  return (list || []).filter((item) => {
+    const k = String(titleOf(item) || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    if (!k || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+};
+
 /* "Continue learning" resume card (R6) — most recent watch position. */
 function ContinueLearning() {
   const [item, setItem] = useState(null);
@@ -137,7 +152,7 @@ export default function Courses() {
               }
               return { id: c.drive_folder_id, name: title, thumbnail_url: isDeadThumb(c.thumbnail_url) ? null : c.thumbnail_url, fromIndex: true };
             });
-            setDriveCourses(mapped);
+            setDriveCourses(dedupeByTitle(mapped, (c) => c.name));
             const tm = {};
             idx.forEach((c) => { if (c.thumbnail_url && !isDeadThumb(c.thumbnail_url)) tm[c.drive_folder_id] = c.thumbnail_url; });
             setDriveThumbs(tm);
@@ -159,9 +174,9 @@ export default function Courses() {
               catch { return [f]; }
             }));
             results.forEach((r) => expanded.push(...r));
-            if (live) setDriveCourses([...expanded]);
+            if (live) setDriveCourses(dedupeByTitle([...expanded], (f) => cleanCourseName(f.name)));
           }
-          if (live) setDriveCourses(expanded);
+          if (live) setDriveCourses(dedupeByTitle(expanded, (f) => cleanCourseName(f.name)));
         } catch { /* ignore */ }
       }
       if (live) setLoading(false);
