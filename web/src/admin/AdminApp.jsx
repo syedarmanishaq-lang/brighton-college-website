@@ -7,7 +7,7 @@ import './admin.css';
 import { useState, useEffect, useCallback } from 'react';
 import {
   sba, backendReady,
-  fetchNews, fetchCourses, fetchResults, fetchMaterial, fetchBooks, fetchGallery, fetchGalleryImages,
+  fetchNews, fetchCourses, fetchResults, fetchMaterial, fetchBooks, fetchGallery, fetchGalleryPhotos, fetchGalleryImages,
   fetchApplications, markReviewed, adminCreate, adminUpdate, adminDelete,
   adminDeleteWithStorage, uploadImage, MAX_UPLOAD_MB, fetchColleges,
   fetchStorageUsage, STORAGE_QUOTA_BYTES,
@@ -854,13 +854,61 @@ function AdmissionsSection({ collegeId, notify }) {
 }
 
 function GallerySection({ collegeId, notify }) {
+  /* Live gallery photos = gallery_media rows with media_type='photo'
+     (the Facebook/Drive photos the public gallery shows, in
+     display_order). Videos are the gallery_media rows with
+     media_type='video', and uploaded photos live in gallery_images
+     (shown first on the public page, newest first). This tab used to
+     list only gallery_images here, so it showed "No entries yet"
+     while the public gallery showed 5 photos — now every source the
+     public page reads is managed on this tab. */
+  const [photos, photosLoading, reloadPhotos] = useRows(() => fetchGalleryPhotos(collegeId));
+  useEffect(() => { reloadPhotos(); }, [collegeId]);
+  /* Drive videos (gallery_media, media_type='video'): one link per video —
+     each short gets its own entry with its own title. The public gallery
+     already plays these (thumbnail + ▶, Drive preview in the lightbox). */
+  const [videos, videosLoading, reloadVideos] = useRows(() =>
+    fetchGallery(collegeId).then((r) => (r || []).filter((m) => m.media_type === 'video')));
+  useEffect(() => { reloadVideos(); }, [collegeId]);
   const [rows, loading, reload] = useRows(() => fetchGalleryImages(collegeId));
   useEffect(() => { reload(); }, [collegeId]);
-  /* Reorder photos: the public gallery shows gallery_images newest
-     first, so moving a photo swaps its created_at with its neighbour —
-     no new column or migration needed, and the public order follows
-     immediately. (Photo dates are never shown publicly.) */
+  /* Reorder gallery_media rows: the public gallery sorts by
+     display_order ascending, so moving a photo/video swaps its
+     display_order with its neighbour. */
   const [moving, setMoving] = useState(false);
+  async function moveMedia(a, b, reloadFn) {
+    if (!a || !b || moving) return;
+    setMoving(true);
+    const aOrder = a.display_order ?? 0, bOrder = b.display_order ?? 0;
+    try {
+      if (aOrder === bOrder) {
+        /* Duplicate order values: nudge the neighbour down one slot
+           instead of a no-op swap. */
+        await adminUpdate('gallery_media', b.id, { display_order: bOrder + 1 });
+      } else {
+        await adminUpdate('gallery_media', a.id, { display_order: bOrder });
+        await adminUpdate('gallery_media', b.id, { display_order: aOrder });
+      }
+      notify && notify('Moved. ✅');
+      reloadFn();
+    } catch (e) { notify && notify('Move failed: ' + e.message, 'err'); }
+    setMoving(false);
+  }
+  const mediaOrderButtons = (reloadFn) => (r, i, list) => (
+    <>
+      <button className="chip" disabled={moving || i === 0} title="Move up — show earlier in the gallery"
+        onClick={() => moveMedia(r, list[i - 1], reloadFn)}>↑</button>{' '}
+      <button className="chip" disabled={moving || i === list.length - 1} title="Move down — show later in the gallery"
+        onClick={() => moveMedia(r, list[i + 1], reloadFn)}>↓</button>{' '}
+    </>
+  );
+  /* New photos/videos go last (highest order + 1) so adding one never
+     shoves a live photo out of its place. */
+  const nextOrder = Math.max(0, ...photos.map((p) => p.display_order || 0), ...videos.map((v) => v.display_order || 0)) + 1;
+  /* Reorder uploaded photos: the public gallery shows gallery_images
+     newest first, so moving a photo swaps its created_at with its
+     neighbour — no new column or migration needed, and the public
+     order follows immediately. (Photo dates are never shown publicly.) */
   async function movePhoto(a, b) {
     if (!a || !b || moving) return;
     setMoving(true);
@@ -882,37 +930,51 @@ function GallerySection({ collegeId, notify }) {
         onClick={() => movePhoto(r, list[i + 1])}>↓</button>{' '}
     </>
   );
-  /* Drive videos (gallery_media, media_type='video'): one link per video —
-     each short gets its own entry with its own title. The public gallery
-     already plays these (thumbnail + ▶, Drive preview in the lightbox). */
-  const [videos, videosLoading, reloadVideos] = useRows(() =>
-    fetchGallery(collegeId).then((r) => (r || []).filter((m) => m.media_type === 'video')));
-  useEffect(() => { reloadVideos(); }, [collegeId]);
   return (
     <div>
       <div className="alert ok" style={{ marginBottom: 16 }}>
-        💡 <b>Organise the gallery:</b> use the <b>↑ ↓</b> buttons to change the
-        order photos appear on the public gallery (top of this list = shown first).
+        💡 <b>Gallery photos (live):</b> these are the photos on the public
+        gallery — use the <b>↑ ↓</b> buttons to change their order (top of
+        this list = shown first). Turn <b>Show in gallery</b> off to hide
+        one without deleting it. To add a photo, share the Drive file as{' '}
+        <b>"Anyone with the link can view"</b> and paste the file ID:{' '}
+        drive.google.com/file/d/<b>PASTE_THIS_PART</b>/view
       </div>
-      <Crud title="Gallery Photos" table="gallery_images" rows={rows} loading={loading} reload={reload} collegeId={collegeId}
-        fileField="image_url" notify={notify} extraActions={orderButtons}
+      <Crud title="Gallery Photos" table="gallery_media" rows={photos} loading={photosLoading} reload={reloadPhotos} collegeId={collegeId}
+        notify={notify} extraActions={mediaOrderButtons(reloadPhotos)}
         columns={[
-          { key: 'image_url', label: 'Photo', type: 'imageupload', bucket: 'gallery', full: true },
-          { key: 'caption', label: 'Caption', full: true },
+          { key: 'title', label: 'Title', full: true },
+          { key: 'description', label: 'Description', type: 'textarea', rows: 2, full: true, hide: true },
+          { key: 'drive_file_id', label: 'Drive file ID', full: true },
+          { key: 'media_type', label: 'Type', type: 'select', opts: ['photo'], def: 'photo', hide: true },
+          { key: 'display_order', label: 'Order (0 = first)', type: 'number', def: nextOrder },
+          { key: 'is_active', label: 'Show in gallery', type: 'check', def: true },
         ]} />
       <div className="alert ok" style={{ margin: '28px 0 16px' }}>
         💡 <b>Gallery videos (shorts):</b> one Drive link per video — each short gets
-        its own title. Share the video as <b>"Anyone with the link can view"</b>,
+        its own title, and the <b>↑ ↓</b> buttons change the order they play in.
+        Share the video as <b>"Anyone with the link can view"</b>,
         then paste the file ID: drive.google.com/file/d/<b>PASTE_THIS_PART</b>/view
       </div>
       <Crud title="Gallery Videos (Drive links)" table="gallery_media" rows={videos} loading={videosLoading} reload={reloadVideos} collegeId={collegeId}
-        notify={notify}
+        notify={notify} extraActions={mediaOrderButtons(reloadVideos)}
         columns={[
           { key: 'title', label: 'Title', full: true },
           { key: 'drive_file_id', label: 'Drive file ID', full: true },
           { key: 'media_type', label: 'Type', type: 'select', opts: ['video'], def: 'video', hide: true },
-          { key: 'display_order', label: 'Order (0 = first)', type: 'number', def: 0 },
+          { key: 'display_order', label: 'Order (0 = first)', type: 'number', def: nextOrder },
           { key: 'is_active', label: 'Show in gallery', type: 'check', def: true },
+        ]} />
+      <div className="alert ok" style={{ margin: '28px 0 16px' }}>
+        💡 <b>Uploaded photos:</b> photos uploaded here (not Drive links) —
+        the public gallery shows these first, newest first. Use the{' '}
+        <b>↑ ↓</b> buttons to change their order.
+      </div>
+      <Crud title="Uploaded Photos" table="gallery_images" rows={rows} loading={loading} reload={reload} collegeId={collegeId}
+        fileField="image_url" notify={notify} extraActions={orderButtons}
+        columns={[
+          { key: 'image_url', label: 'Photo', type: 'imageupload', bucket: 'gallery', full: true },
+          { key: 'caption', label: 'Caption', full: true },
         ]} />
     </div>
   );

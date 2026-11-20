@@ -118,6 +118,13 @@ export const fetchCourseById = (id, collegeId) =>
 export const fetchGallery = (collegeId) =>
   sba.get('/rest/v1/gallery_media?select=*&order=display_order.asc');
 
+/* Live gallery photos: the gallery_media rows the public Gallery page
+   shows (media_type='photo'), in display_order. The public page treats
+   every non-video row as a photo — filter the same way, not by an
+   exact 'photo' match. */
+export const fetchGalleryPhotos = (collegeId) =>
+  fetchGallery(collegeId).then((r) => (r || []).filter((m) => m.media_type !== 'video'));
+
 /* Admin-uploaded gallery photos live in gallery_images (bucket uploads);
    the public Gallery page merges these with the Drive-based gallery_media.
    NOTE: gallery_media rows carry college_id null, so fetchGallery above
