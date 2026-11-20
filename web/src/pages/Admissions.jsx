@@ -65,7 +65,19 @@ export default function Admissions() {
     }
     setBusy(true);
     try {
-      await submitApplication({ ...form, board_marks: form.board_marks ? Number(form.board_marks) : null, college_id: college && college.id });
+      /* Payload must contain ONLY columns that exist in admission_applications:
+         id, college_id, full_name, father_name, section, program, school,
+         board_marks, phone, address, reviewed, created_at.
+         The table has NO gender / previous_school columns — sending them made
+         PostgREST reject every submission with 400 PGRST204. So map
+         previous_school -> school and drop gender (section covers boys/girls). */
+      const { gender: _gender, previous_school, ...rest } = form;
+      await submitApplication({
+        ...rest,
+        school: previous_school || null,
+        board_marks: form.board_marks ? Number(form.board_marks) : null,
+        college_id: college && college.id,
+      });
       setDone(true);
       setForm(emptyForm);
     } catch (ex) {
