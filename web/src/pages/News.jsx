@@ -5,10 +5,16 @@ import { LLink, useLang } from '../i18n/LangContext.jsx';
 import { useCollege, useSite } from '../college/CollegeContext.jsx';
 
 import { fetchNews, backendReady } from '../lib/supabase.js';
+import { cacheFresh, cacheSet } from '../lib/cache.js';
 import { NEWS_CATEGORIES } from '../data/college.js';
 import Seo from '../seo/Seo.jsx';
 import { IBook } from '../components/icons.jsx';
 import AdSlot from '../components/AdSlot.jsx';
+
+/* Public reads cache: 5 minutes (same pattern as Home). Repeat visits
+   render instantly from the last saved list; a fresh fetch runs only
+   when the cache is stale. Key uses the college SLUG, not the UUID. */
+const NEWS_TTL_MS = 5 * 60 * 1000;
 
 function readTime(text) {
   const words = String(text || '').split(/\s+/).filter(Boolean).length;
@@ -52,14 +58,17 @@ function NewsCard({ n, featured }) {
 export default function News() {
   const { t } = useLang();
   const { college } = useCollege();
-  const [items, setItems] = useState([]);
+  const cacheKey = `news:all:${(college && college.slug) || 'all'}`;
+  const [items, setItems] = useState(() => cacheFresh(cacheKey, NEWS_TTL_MS) || []);
   const [cat, setCat] = useState('All');
   const [sec, setSec] = useState('all');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => cacheFresh(cacheKey, NEWS_TTL_MS) === null);
 
   useEffect(() => {
     if (!backendReady()) { setLoading(false); return; }
-    fetchNews(null, college && college.id).then((r) => setItems(r || [])).catch(() => {}).finally(() => setLoading(false));
+    const cached = cacheFresh(cacheKey, NEWS_TTL_MS);
+    if (cached) { setItems(cached); setLoading(false); return; } // fresh cache: no re-fetch
+    fetchNews(null, college && college.id).then((r) => { setItems(r || []); cacheSet(cacheKey, r || []); }).catch(() => {}).finally(() => setLoading(false));
   }, [college]);
 
   const bySec = sec === 'all' ? items : items.filter((n) => (n.section || 'general') === sec);

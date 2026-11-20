@@ -62,7 +62,7 @@ function useTicker() {
   useEffect(() => {
     if (!backendReady()) return;
     const cached = cacheFresh(key, NEWS_TTL_MS);
-    if (cached) setItems(cached);
+    if (cached) { setItems(cached); return; } // fresh cache: no background re-fetch
     fetchTickerNotices(college && college.id)
       .then((r) => { setItems(r || []); cacheSet(key, r || []); })
       .catch(() => {});
@@ -79,7 +79,7 @@ function useNews(limit) {
     if (!backendReady()) { setLoading(false); return; }
     let alive = true;
     const cached = cacheFresh(key, NEWS_TTL_MS);
-    if (cached) { setItems(cached); setLoading(false); }
+    if (cached) { setItems(cached); setLoading(false); return; } // fresh cache: no background re-fetch
     fetchNews(limit, college && college.id)
       .then((r) => { if (!alive) return; setItems(r || []); cacheSet(key, r || []); })
       .catch(() => {})

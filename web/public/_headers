@@ -1,0 +1,10 @@
+# Cloudflare Pages edge-cache headers.
+# HTML is dynamic (SPA shell + fresh content): no browser cache, but a
+# SHORT 60s shared edge cache so concurrent spikes share one origin
+# fetch. Freshness is preserved: the service worker is network-first
+# for navigations, and 60s is far below any content TTL.
+# Vite-hashed /assets/* files are immutable and cache for a year.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+/*
+  Cache-Control: public, max-age=0, s-maxage=60, must-revalidate

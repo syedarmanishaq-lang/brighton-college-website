@@ -4,8 +4,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { LLink, useLang } from '../i18n/LangContext.jsx';
 import { fetchBooks, backendReady } from '../lib/supabase.js';
+import { cacheFresh, cacheSet } from '../lib/cache.js';
 import { IBook, IDoc, ISearch } from './icons.jsx';
 import './BookLibrary.css';
+
+/* Public reads cache: 5 minutes (same pattern as Home/News). Repeat
+   visits render instantly from the last saved list; a fresh fetch runs
+   only when the cache is stale. One key per kind (book / paper). */
+const BOOKS_TTL_MS = 5 * 60 * 1000;
 
 const BOARDS = ['KPK', 'Punjab', 'Federal', 'Sindh', 'Balochistan'];
 const CLASSES = ['11th', '12th'];
@@ -101,8 +107,9 @@ export function HubLinks({ current }) {
 export default function BookLibrary({ kind }) {
   const { t } = useLang();
   const L = t.library;
-  const [books, setBooks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = `books:${kind}`;
+  const [books, setBooks] = useState(() => cacheFresh(cacheKey, BOOKS_TTL_MS) || []);
+  const [loading, setLoading] = useState(() => cacheFresh(cacheKey, BOOKS_TTL_MS) === null);
   const [failed, setFailed] = useState(false);
   const [board, setBoard] = useState('All');
   const [cls, setCls] = useState('All');
@@ -114,9 +121,11 @@ export default function BookLibrary({ kind }) {
     setLoading(true);
     setFailed(false);
     if (!backendReady()) { setLoading(false); setFailed(true); return; }
+    const cached = cacheFresh(cacheKey, BOOKS_TTL_MS);
+    if (cached) { setBooks(cached); setLoading(false); return; } // fresh cache: no re-fetch
     const timer = setTimeout(() => {
       fetchBooks({ kind })
-        .then((r) => { if (live) { setBooks(r || []); setLoading(false); } })
+        .then((r) => { if (live) { setBooks(r || []); cacheSet(cacheKey, r || []); setLoading(false); } })
         .catch(() => { if (live) { setFailed(true); setLoading(false); } });
     }, 250); // debounce for search typing
     return () => { live = false; clearTimeout(timer); };

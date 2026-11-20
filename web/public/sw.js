@@ -8,7 +8,7 @@
      NEVER cached here — they always go to the network, so live
      news/results/courses can never go stale behind this worker.
    - Only same-origin hashed/static assets use cache-first. */
-const BRIGHTON_CACHE = 'brighton-v2';
+const BRIGHTON_CACHE = 'brighton-v3';
 const START_PAGE = '/brighton/en';
 
 self.addEventListener('install', (event) => {

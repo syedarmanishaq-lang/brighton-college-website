@@ -3,10 +3,16 @@ import { LLink, useLang } from '../i18n/LangContext.jsx';
 import { useCollege, useSite } from '../college/CollegeContext.jsx';
 
 import { fetchResults, backendReady } from '../lib/supabase.js';
+import { cacheFresh, cacheSet } from '../lib/cache.js';
 import { drivePreviewUrl } from '../lib/drive.js';
 import { CLASS_LEVELS, TEST_TYPES } from '../data/college.js';
 import Seo from '../seo/Seo.jsx';
 import { ICal } from '../components/icons.jsx';
+
+/* Public reads cache: 5 minutes (same pattern as Home/News). Repeat
+   visits with the same filters render instantly; a fresh fetch runs
+   only when the cache is stale. Key uses the college SLUG. */
+const RESULTS_TTL_MS = 5 * 60 * 1000;
 
 /* Renders one result entry: an uploaded result picture, a Drive file
    (document/video/image), or an inline subject-wise marks table stored
@@ -52,20 +58,23 @@ function ResultBody({ r }) {
 export default function Results() {
   const { t } = useLang();
   const { college } = useCollege();
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(() => cacheFresh(`results:All:All:${(college && college.slug) || 'all'}`, RESULTS_TTL_MS) || []);
   const [cls, setCls] = useState('All');
   const [typ, setTyp] = useState('All');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => cacheFresh(`results:All:All:${(college && college.slug) || 'all'}`, RESULTS_TTL_MS) === null);
   const [openId, setOpenId] = useState(null);
 
   useEffect(() => {
     if (!backendReady()) { setLoading(false); return; }
+    const cacheKey = `results:${cls}:${typ}:${(college && college.slug) || 'all'}`;
+    const cached = cacheFresh(cacheKey, RESULTS_TTL_MS);
+    if (cached) { setItems(cached); setLoading(false); return; } // fresh cache: no re-fetch
     fetchResults({
       classLevel: cls === 'All' ? null : cls,
       testType: typ === 'All' ? null : typ,
       collegeId: college && college.id,
       publishedOnly: true,
-    }).then((r) => setItems(r || [])).catch(() => {}).finally(() => setLoading(false));
+    }).then((r) => { setItems(r || []); cacheSet(cacheKey, r || []); }).catch(() => {}).finally(() => setLoading(false));
   }, [cls, typ, college]);
 
   return (

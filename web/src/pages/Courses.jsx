@@ -242,7 +242,7 @@ export default function Courses() {
                   <div className="card" key={'sb-' + c.id} style={{ padding: 0, overflow: 'hidden' }}>
                     <LLink to={`/courses/${c.id}`} style={{ display: 'block', aspectRatio: '16/9' }}>
                       {c.thumbnail_url
-                        ? <img src={c.thumbnail_url} alt={c.title}
+                        ? <img src={c.thumbnail_url} alt={c.title} loading="lazy"
                             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                             onError={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = courseThumbFor(c.title); } }} />
                         : <div className="thumb-fallback">
