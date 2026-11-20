@@ -108,17 +108,22 @@ export default function Courses() {
 
   useEffect(() => {
     let live = true;
-    /* FAST PATH: Supabase index first. ONLY if empty, use slow Drive API.
-       Sequential (not parallel) so the slow path never blocks the fast one. */
+    /* The courses TABLE is the live source now (managed from the admin
+       panel) — the Drive index and the live Drive scan below are only
+       a fallback for when the table is empty, so a course never shows
+       twice. Sequential (not parallel) so the slow path never blocks
+       the fast one. */
     (async () => {
+      let tableCourses = [];
       if (backendReady()) {
         try {
           const r = await fetchCourses({ collegeId: college && college.id });
-          if (live) setCourses(r || []);
+          tableCourses = r || [];
+          if (live) setCourses(tableCourses);
         } catch { /* ignore */ }
       }
       let usedIndex = false;
-      if (backendReady() && live) {
+      if (backendReady() && live && tableCourses.length === 0) {
         try {
           const idx = await fetchDriveCourseIndex(college && college.id);
           if (!live) return;
@@ -139,8 +144,8 @@ export default function Courses() {
           }
         } catch { /* fall through to Drive API */ }
       }
-      /* SLOW FALLBACK: live Drive API (only if index empty) */
-      if (!usedIndex && driveReady() && DRIVE_FOLDER_ID && live) {
+      /* SLOW FALLBACK: live Drive API (only if index AND table are empty) */
+      if (!usedIndex && tableCourses.length === 0 && driveReady() && DRIVE_FOLDER_ID && live) {
         try {
           const files = await driveListAll(DRIVE_FOLDER_ID);
           if (!live) return;

@@ -651,7 +651,10 @@ function CoursesSection({ collegeId, notify }) {
   return (
     <>
       <div className="alert ok" style={{ marginBottom: 16 }}>
-        💡 <b>How courses work:</b> create one <b>Drive folder per course</b> (e.g. "Cyber Security"),
+        💡 <b>How courses work:</b> the live courses below come from the
+        college's Drive library — edit a title, thumbnail or sort order
+        here and it changes on the public Courses page right away. To
+        add a course, create one <b>Drive folder per course</b> (e.g. "Cyber Security"),
         share it as <b>"Anyone with the link can view"</b>, then paste the folder ID below.
         Videos inside are listed automatically — no need to add them one by one.
         <br />Folder ID = the long code in the folder's URL: drive.google.com/drive/folders/<b>PASTE_THIS_PART</b>
