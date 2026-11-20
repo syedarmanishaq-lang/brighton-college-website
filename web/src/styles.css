@@ -119,7 +119,7 @@ img { max-width: 100%; }
   background: var(--header-bg); backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
-.header-inner { display: flex; align-items: center; justify-content: space-between; height: 72px;
+.header-inner { display: flex; align-items: center; justify-content: space-between; height: 72px; gap: 16px;
   width: 100%; max-width: 1640px; margin: 0 auto;
   padding: 0 max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left)); }
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; flex: none; }
@@ -129,7 +129,7 @@ img { max-width: 100%; }
   display: flex; align-items: center; justify-content: center;
   color: var(--gold-400); font-family: var(--font-display); font-weight: 800; font-size: 20px;
 }
-.brand-name { font-family: var(--font-display); font-weight: 700; font-size: 19px; color: var(--heading); line-height: 1.15; white-space: nowrap; }
+.brand-name { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--heading); line-height: 1.15; white-space: nowrap; }
 .brand-sub { font-size: 11px; color: var(--muted); letter-spacing: .4px; white-space: nowrap; }
 /* Desktop nav: 14 links + toggles + CTA must fit on ONE line. Links never
    shrink or wrap (a squeezed link used to wrap its label onto two lines);
