@@ -46,6 +46,22 @@ const waLink = (phone) => {
   return d ? 'https://wa.me/' + d : null;
 };
 
+/* datetime-local ⇄ ISO helpers for the real date picker in edit forms.
+   The stored value is an ISO timestamp; the input needs local
+   "YYYY-MM-DDTHH:mm" and gives it back the same way. */
+function toLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function fromLocalInput(v) {
+  if (!v) return null;
+  const d = new Date(v);
+  return isNaN(d) ? null : d.toISOString();
+}
+
 /* ================= Login =================
    First visit: the owner SETS the admin password (stored as a SHA-256 hash
    in Supabase site_settings — works on every device — plus a localStorage
@@ -385,12 +401,15 @@ function useConfirm() {
   return { ask, dialog };
 }
 
-function Crud({ title, table, columns, rows, loading, reload, onChanged, collegeId, fileField, notify, extraActions }) {
+function Crud({ title, table, columns, rows, loading, reload, onChanged, collegeId, fileField, notify, extraActions, preview }) {
   const [editing, setEditing] = useState(null); // null | {} (new) | row (edit)
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
   const { ask, dialog } = useConfirm();
   const say = notify || ((m, k) => { if (k === 'err') alert(m); });
+  const openEditing = (row) => { setShowPreview(false); setEditing(row); };
+  const closeEditing = () => { setEditing(null); setShowPreview(false); };
 
   const blank = {};
   columns.forEach((c) => { blank[c.key] = c.def !== undefined ? c.def : ''; });
@@ -438,7 +457,7 @@ function Crud({ title, table, columns, rows, loading, reload, onChanged, college
       {dialog}
       <div className="adm-head">
         <h2>{title}</h2>
-        <button className="btn btn-gold" onClick={() => setEditing({ ...blank })}>+ Add New</button>
+        <button className="btn btn-gold" onClick={() => openEditing({ ...blank })}>+ Add New</button>
       </div>
       {err && <div className="alert err">{err}</div>}
       {loading ? <div className="loading">Loading…</div> : (
@@ -460,7 +479,7 @@ function Crud({ title, table, columns, rows, loading, reload, onChanged, college
                   ))}
                   <td style={{ whiteSpace: 'nowrap' }}>
                     {extraActions ? extraActions(r, i, rows) : null}
-                    <button className="chip" onClick={() => setEditing({ ...r })}>Edit</button>{' '}
+                    <button className="chip" onClick={() => openEditing({ ...r })}>Edit</button>{' '}
                     <button className="chip chip-danger" onClick={() => del(r)}>Delete</button>
                   </td>
                 </tr>
@@ -472,9 +491,19 @@ function Crud({ title, table, columns, rows, loading, reload, onChanged, college
       )}
 
       {editing && (
-        <div className="modal" onClick={() => setEditing(null)}>
+        <div className="modal" onClick={closeEditing}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <h3>{editing.id ? 'Edit' : 'Add'} — {title}</h3>
+            {showPreview && preview ? (
+              <div>
+                {preview(editing)}
+                <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+                  <button className="btn btn-outline" onClick={() => setShowPreview(false)}>← Back to editing</button>
+                  <button className="btn btn-gold" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save'}</button>
+                </div>
+              </div>
+            ) : (
+            <>
             <div className="aform">
               {columns.map((c) => (
                 <Field key={c.key} label={c.label} full={c.full}>
@@ -488,15 +517,21 @@ function Crud({ title, table, columns, rows, loading, reload, onChanged, college
                         : c.type === 'imageupload'
                           ? <ImageUpload bucket={c.bucket} label={c.label} value={editing[c.key]}
                               onChange={(v) => setEditing({ ...editing, [c.key]: v })} />
+                          : c.type === 'date'
+                            ? <input type="datetime-local" value={toLocalInput(editing[c.key])}
+                                onChange={(e) => setEditing({ ...editing, [c.key]: e.target.value ? fromLocalInput(e.target.value) : editing[c.key] })} />
                           : <T v={editing[c.key]} on={(v) => setEditing({ ...editing, [c.key]: v })} />}
                 </Field>
               ))}
             </div>
             {c_hint(columns, editing)}
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              {preview && <button className="btn btn-outline" onClick={() => setShowPreview(true)}>👁 Preview</button>}
               <button className="btn btn-gold" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save'}</button>
-              <button className="btn btn-outline" onClick={() => setEditing(null)}>Cancel</button>
+              <button className="btn btn-outline" onClick={closeEditing}>Cancel</button>
             </div>
+            </>
+            )}
           </div>
         </div>
       )}
@@ -508,11 +543,40 @@ function c_hint() { return null; }
 
 /* ================= Sections ================= */
 
+/* Preview a news draft exactly as the public article page shows it
+   (same tags, date, cover image and body paragraphs) — so the admin
+   sees the post before publishing it. */
+function NewsPreview({ draft }) {
+  return (
+    <div className="prose">
+      <div className="meta" style={{ marginBottom: 18, display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span className="tag">{draft.category || 'General'}</span>
+        {(draft.section === 'boys' || draft.section === 'girls') && (
+          <span className="tag tag-section">{draft.section === 'boys' ? 'Boys' : 'Girls'}</span>
+        )}
+        <span style={{ color: 'var(--muted)', fontSize: 14 }}>
+          {draft.published_at ? new Date(draft.published_at).toLocaleDateString() : 'No date yet'}
+        </span>
+        {draft.pinned && <span className="tag">📌 Pinned</span>}
+        {!draft.published && <span className="tag" style={{ background: '#e05252', color: '#fff' }}>Draft — not live</span>}
+      </div>
+      <h2 style={{ marginTop: 0 }}>{draft.title || '(No title yet)'}</h2>
+      {draft.image_url && (
+        <img src={draft.image_url} alt={draft.title}
+          style={{ width: '100%', height: 'auto', objectFit: 'contain', background: 'var(--navy-900)', border: '1px solid var(--line)', borderRadius: 12, marginBottom: 22, display: 'block' }} />
+      )}
+      {(draft.body || '').split('\n').map((para, i) => <p key={i}>{para}</p>)}
+      {!draft.body && <p className="muted">No body text yet.</p>}
+      <p className="muted sm" style={{ marginTop: 18 }}>— Preview only. Nothing is published until you press Save.</p>
+    </div>
+  );
+}
+
 function NewsSection({ collegeId, notify }) {
   const [rows, loading, reload] = useRows(() => fetchNews(null, collegeId, { includeDrafts: true }));
   useEffect(() => { reload(); }, [collegeId]);
   return <Crud title="News & Updates" table="news_posts" rows={rows} loading={loading} reload={reload} collegeId={collegeId}
-    fileField="image_url" notify={notify}
+    fileField="image_url" notify={notify} preview={(d) => <NewsPreview draft={d} />}
     columns={[
       { key: 'title', label: 'Title', full: true },
       { key: 'category', label: 'Category', type: 'select', opts: NEWS_CATEGORIES, def: 'Notice' },
