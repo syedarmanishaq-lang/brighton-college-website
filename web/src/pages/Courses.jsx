@@ -134,7 +134,10 @@ export default function Courses() {
         try {
           const r = await fetchCourses({ collegeId: college && college.id });
           tableCourses = r || [];
-          if (live) setCourses(tableCourses);
+          /* Same title dedupe as the Drive paths below: the table holds
+             both folders for 9 twice-copied titles — the listing shows
+             each title once (first row wins). */
+          if (live) setCourses(dedupeByTitle(tableCourses, (c) => c.title));
         } catch { /* ignore */ }
       }
       let usedIndex = false;
