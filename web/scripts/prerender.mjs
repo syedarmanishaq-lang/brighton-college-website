@@ -149,10 +149,15 @@ async function renderOne(browser, base, route) {
     await page.setViewport({ width: 1280, height: 800 });
     const { auth } = proxySettings();
     if (auth) await page.authenticate(auth);
-    await page.goto(base + route, { waitUntil: 'networkidle0', timeout: 90000 });
-    // Static H1s render with the first paint; data lists follow.
-    await page.waitForSelector('#root h1', { timeout: 30000 }).catch(() => {});
-    await page.waitForNetworkIdle({ idleTime: 1000, timeout: 20000 }).catch(() => {});
+    // Fast waits on purpose: the SEO elements (title/meta/H1) render
+    // with the first paint and never need the network to settle.
+    // networkidle0 made CI builds take 10+ minutes (each page waited
+    // on slow Supabase/Drive/Fonts fetches). Data lists are best
+    // effort: whatever loads inside the short settle window is kept,
+    // the rest loads live in the browser as designed.
+    await page.goto(base + route, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForSelector('#root h1', { timeout: 20000 }).catch(() => {});
+    await page.waitForNetworkIdle({ idleTime: 500, timeout: 5000 }).catch(() => {});
     const html = await page.content();
     const title = (html.match(/<title>([^<]*)<\/title>/) || [])[1] || '';
     const h1 = (html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/) || [])[1] || '';
