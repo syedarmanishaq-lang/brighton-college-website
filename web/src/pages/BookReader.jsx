@@ -50,15 +50,11 @@ export default function BookReader() {
             </div>
           ) : (
             <div className="reader-wrap">
-              <iframe
-                src={embedUrl}
-                title={book.title}
-                style={{ width: '100%', height: 'calc(100dvh - 230px)', minHeight: 520, border: '1px solid var(--line)', borderRadius: 12 }}
-                allow="autoplay; fullscreen"
-                allowFullScreen
-              />
-              <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-                <LLink to="/books" className="btn">{lang === 'ur' ? '← واپس' : '← Back'}</LLink>
+              {/* Download first: on a slow connection the Drive viewer can
+                  take ~50s for a ~49MB book, and these buttons sat below a
+                  full-screen iframe — users never scrolled far enough to
+                  find Download. The size is the book's real file_size_mb. */}
+              <div style={{ marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
                 <a
                   href={`https://drive.google.com/uc?export=download&id=${book.drive_file_id}`}
                   target="_blank"
@@ -66,6 +62,7 @@ export default function BookReader() {
                   className="btn btn-gold"
                 >
                   {lang === 'ur' ? '↓ ڈاؤن لوڈ کریں' : '↓ Download'}
+                  {book.file_size_mb ? ` (${book.file_size_mb} MB)` : ''}
                 </a>
                 <a
                   href={`https://drive.google.com/file/d/${book.drive_file_id}/view`}
@@ -75,11 +72,23 @@ export default function BookReader() {
                 >
                   {lang === 'ur' ? 'ڈرائیو میں کھولیں' : 'Open in Drive'}
                 </a>
+                <LLink to="/books" className="btn">{lang === 'ur' ? '← واپس' : '← Back'}</LLink>
               </div>
+              <iframe
+                src={embedUrl}
+                title={book.title}
+                style={{ width: '100%', height: 'calc(100dvh - 230px)', minHeight: 520, border: '1px solid var(--line)', borderRadius: 12 }}
+                allow="autoplay; fullscreen"
+                allowFullScreen
+              />
               <p className="muted" style={{ textAlign: 'center', marginTop: 12, fontSize: 14 }}>
                 {lang === 'ur'
-                  ? 'مشورہ: اگر صفحات آہستہ لوڈ ہوں تو Download پر ٹیپ کریں اور کتاب اپنے موبائل کے PDF ریڈر میں پڑھیں — وہ زیادہ تیز چلے گا اور آف لائن بھی کام کرے گا۔'
-                  : 'Tip: if pages load slowly, tap Download and read the book in your phone’s own PDF reader — it loads much faster and works offline.'}
+                  ? (book.file_size_mb
+                    ? `یہ کتاب ${book.file_size_mb} MB کی ہے — ڈرائیو ویوور اسے صفحہ بہ صفحہ لوڈ کرتا ہے اس لیے بڑی کتابیں آہستہ کھلتی ہیں۔ Download پر ٹیپ کریں اور اپنے موبائل کے PDF ریڈر میں پڑھیں — وہ زیادہ تیز چلے گا اور آف لائن بھی کام کرے گا۔`
+                    : 'مشورہ: اگر صفحات آہستہ لوڈ ہوں تو Download پر ٹیپ کریں اور کتاب اپنے موبائل کے PDF ریڈر میں پڑھیں — وہ زیادہ تیز چلے گا اور آف لائن بھی کام کرے گا۔')
+                  : (book.file_size_mb
+                    ? `This book is ${book.file_size_mb} MB — the Drive viewer loads it page by page, so large books open slowly. Tap Download and read it in your phone's own PDF reader instead — it loads much faster and works offline.`
+                    : 'Tip: if pages load slowly, tap Download and read the book in your phone’s own PDF reader — it loads much faster and works offline.')}
               </p>
             </div>
           )}
