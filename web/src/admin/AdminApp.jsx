@@ -40,6 +40,35 @@ function Login({ onOk }) {
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
   const [err, setErr] = useState('');
+  /* Password reset is NOT a backdoor: resetting requires the CURRENT
+     password first. Anyone who does not know it cannot overwrite the
+     admin password from this screen. (If the password is truly lost,
+     the admin_pw_hash row must be deleted in the Supabase dashboard.) */
+  const [resetting, setResetting] = useState(false);
+  const [oldPw, setOldPw] = useState('');
+  const [resetErr, setResetErr] = useState('');
+  const [resetBusy, setResetBusy] = useState(false);
+
+  async function verifyAndReset(e) {
+    e.preventDefault();
+    setResetErr('');
+    setResetBusy(true);
+    const hash = await sha256(oldPw);
+    let stored = null;
+    try { stored = await getSettingByKey('admin_pw_hash'); } catch {}
+    if (!stored) stored = localStorage.getItem(PW_KEY);
+    if (stored && hash === stored) {
+      localStorage.removeItem(PW_KEY);
+      sessionStorage.removeItem(SESSION_KEY);
+      setResetting(false);
+      setOldPw('');
+      setMode('setup');
+      setPw(''); setPw2(''); setErr('');
+    } else {
+      setResetErr('Wrong current password — reset not allowed.');
+    }
+    setResetBusy(false);
+  }
 
   useEffect(() => {
     (async () => {
@@ -109,12 +138,31 @@ function Login({ onOk }) {
         <button className="btn btn-gold" style={{ width: '100%', marginTop: 12 }}>
           {mode === 'setup' ? 'Set Password & Sign In' : 'Sign In'}
         </button>
-        {mode === 'login' && (
+        {mode === 'login' && !resetting && (
           <p style={{ textAlign: 'center', marginTop: 12 }}>
-            <button type="button" onClick={() => { if (confirm('Reset admin password? You will set a new one.')) { localStorage.removeItem(PW_KEY); sessionStorage.removeItem(SESSION_KEY); setMode('setup'); setPw(''); setPw2(''); setErr(''); } }} style={{ background: 'none', border: 'none', color: '#888', textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>
+            <button type="button" onClick={() => { setResetting(true); setResetErr(''); setOldPw(''); }} style={{ background: 'none', border: 'none', color: '#888', textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>
               Forgot password? Reset it
             </button>
           </p>
+        )}
+        {mode === 'login' && resetting && (
+          <form onSubmit={verifyAndReset} style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
+            <p className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
+              To reset, first enter the <b>current</b> admin password.
+            </p>
+            {resetErr && <div className="alert err">{resetErr}</div>}
+            <input type="password" placeholder="Current admin password" value={oldPw}
+              onChange={(e) => setOldPw(e.target.value)} autoFocus
+              style={{ width: '100%', marginBottom: 10 }} />
+            <button className="btn btn-gold" style={{ width: '100%' }} disabled={resetBusy}>
+              {resetBusy ? 'Checking…' : 'Verify & reset password'}
+            </button>
+            <p style={{ textAlign: 'center', marginTop: 10 }}>
+              <button type="button" onClick={() => setResetting(false)} style={{ background: 'none', border: 'none', color: '#888', textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>
+                Cancel
+              </button>
+            </p>
+          </form>
         )}
         {mode === 'setup' && (
           <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
