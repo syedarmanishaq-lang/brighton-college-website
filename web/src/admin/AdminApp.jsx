@@ -7,7 +7,7 @@ import './admin.css';
 import { useState, useEffect, useCallback } from 'react';
 import {
   sba, backendReady,
-  fetchNews, fetchCourses, fetchResults, fetchMaterial, fetchGallery, fetchGalleryImages,
+  fetchNews, fetchCourses, fetchResults, fetchMaterial, fetchBooks, fetchGallery, fetchGalleryImages,
   fetchApplications, markReviewed, adminCreate, adminUpdate, adminDelete,
   adminDeleteWithStorage, uploadImage, MAX_UPLOAD_MB, fetchColleges,
   fetchStorageUsage, STORAGE_QUOTA_BYTES,
@@ -577,6 +577,52 @@ function ResultsSection({ collegeId, notify }) {
   );
 }
 
+/* Books & past papers manager — the `books` table (textbooks + past
+   papers, all boards) is global, not college-scoped. Type is derived
+   from the title, same as the public Books/Past Papers pages: titles
+   containing "paper" are past papers, the rest are textbooks. */
+function BooksSection({ notify }) {
+  const [kind, setKind] = useState('all'); // 'all' | 'book' | 'paper'
+  const [search, setSearch] = useState('');
+  const [q, setQ] = useState('');
+  const [rows, loading, reload] = useRows(() => fetchBooks({ kind: kind === 'all' ? undefined : kind, search: q || undefined }));
+  useEffect(() => { reload(); }, [kind, q]);
+  const counts = {
+    all: rows.length,
+    book: rows.filter((b) => !/paper/i.test(b.title || '')).length,
+    paper: rows.filter((b) => /paper/i.test(b.title || '')).length,
+  };
+  return (
+    <div>
+      <div className="adm-head"><h2>Books &amp; Past Papers</h2>
+        <span className="muted sm">{rows.length} entries{kind === 'all' ? ` · ${counts.book} textbooks · ${counts.paper} past papers` : ''}</span></div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
+        {[['all', 'All'], ['book', '📖 Textbooks'], ['paper', '📄 Past papers']].map(([k, label]) => (
+          <button key={k} type="button" className="chip" onClick={() => setKind(k)}
+            style={kind === k ? { background: 'var(--navy-900)', color: '#fff', borderColor: 'var(--navy-900)' } : undefined}>
+            {label}
+          </button>
+        ))}
+        <input value={search} onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') setQ(search); }}
+          placeholder="Search by title…" style={{ flex: '1 1 200px', maxWidth: 320 }} />
+        <button type="button" className="btn btn-outline" onClick={() => setQ(search)}>Search</button>
+        {q && <button type="button" className="chip" onClick={() => { setQ(''); setSearch(''); }}>✕ Clear</button>}
+      </div>
+      <Crud title="Books & Past Papers" table="books" rows={rows} loading={loading} reload={reload}
+        notify={notify}
+        columns={[
+          { key: 'title', label: 'Title', full: true },
+          { key: 'board', label: 'Board', type: 'select', opts: ['KPK', 'Punjab', 'Federal', 'Sindh', 'Balochistan'], def: 'KPK' },
+          { key: 'class_level', label: 'Class', type: 'select', opts: ['11th', '12th'], def: '11th' },
+          { key: 'subject', label: 'Subject' },
+          { key: 'drive_file_id', label: 'Drive file ID', full: true },
+          { key: 'file_size_mb', label: 'Size (MB)', type: 'number', hide: true },
+        ]} />
+    </div>
+  );
+}
+
 function MaterialSection({ collegeId, notify }) {
   const [rows, loading, reload] = useRows(() => fetchMaterial({ collegeId }));
   useEffect(() => { reload(); }, [collegeId]);
@@ -888,6 +934,7 @@ const TABS = [
   ['courses', '🎬 Courses'],
   ['results', '📊 Results'],
   ['material', '📚 Material'],
+  ['books', '📖 Books'],
   ['admissions', '📝 Admissions'],
   ['gallery', '📸 Gallery'],
   ['messages', '✉️ Messages'],
@@ -1002,6 +1049,7 @@ export default function AdminApp() {
         {tab === 'courses' && <CoursesSection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'results' && <ResultsSection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'material' && <MaterialSection collegeId={activeCollegeId} notify={notify} />}
+        {tab === 'books' && <BooksSection notify={notify} />}
         {tab === 'admissions' && <AdmissionsSection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'gallery' && <GallerySection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'messages' && <MessagesSection collegeId={activeCollegeId} notify={notify} onUnread={setUnreadMsg} />}
