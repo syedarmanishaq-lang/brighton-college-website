@@ -1,10 +1,15 @@
 import React from 'react';
 import { LLink, useLang } from '../i18n/LangContext.jsx';
 import { FACULTY } from '../data/college.js';
+import { useAdmissionsOpen } from '../lib/settings.js';
 import Seo from '../seo/Seo.jsx';
 
 export default function Faculty() {
   const { t } = useLang();
+  /* Live admissions state — same switch Admissions.jsx reads, so this page
+     can never again claim "open" while admissions are closed. */
+  const admissionsOpen = useAdmissionsOpen();
+  const st = t.admissionsStatus || {};
   return (
     <>
       <Seo page="faculty" />
@@ -44,7 +49,7 @@ export default function Faculty() {
 
           <div className="card" style={{ marginTop: 30 }}>
             <h3>Want to learn from them?</h3>
-            <p>Admissions are open for 11th &amp; 12th — boys and girls sections. Visit the campus and meet your future teachers.</p>
+            <p>{admissionsOpen ? st.openLead : st.closedLead}</p>
             <LLink className="btn btn-gold" to="/contact">{t.visitCampus}</LLink>
           </div>
         </div>
