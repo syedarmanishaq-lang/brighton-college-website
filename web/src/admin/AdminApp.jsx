@@ -30,6 +30,22 @@ async function sha256(s) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/* Normalize a Pakistani phone number to international digits (92…).
+   Accepts 03xx-xxxxxxx, +92 3xx xxxxxxx, 92… or 3xxxxxxxxx. Returns null
+   when the number cannot be used for WhatsApp/calling. */
+function pkDigits(phone) {
+  const d = String(phone || '').replace(/\D/g, '');
+  if (!d) return null;
+  if (d.startsWith('92') && d.length === 12) return d;
+  if (d.startsWith('0') && d.length === 11) return '92' + d.slice(1);
+  if (d.startsWith('3') && d.length === 10) return '92' + d;
+  return null;
+}
+const waLink = (phone) => {
+  const d = pkDigits(phone);
+  return d ? 'https://wa.me/' + d : null;
+};
+
 /* ================= Login =================
    First visit: the owner SETS the admin password (stored as a SHA-256 hash
    in Supabase site_settings — works on every device — plus a localStorage
@@ -630,7 +646,20 @@ function AdmissionsSection({ collegeId, notify }) {
                 <td>{new Date(r.created_at).toLocaleDateString()}</td>
                 <td><b>{r.full_name}</b><br /><span className="muted sm">{r.address || ''}</span></td>
                 <td>{r.father_name}</td><td>{r.section}</td><td>{r.program}</td>
-                <td><a href={'tel:' + r.phone}>{r.phone}</a></td>
+                <td>
+                  <a href={'tel:' + r.phone}>{r.phone}</a>
+                  {waLink(r.phone) && (
+                    <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                      <a className="chip" href={waLink(r.phone)} target="_blank" rel="noreferrer"
+                        style={{ textDecoration: 'none', background: '#e7f6ec', borderColor: '#bfe6c9', color: '#157347' }}>
+                        💬 WhatsApp
+                      </a>
+                      <a className="chip" href={'tel:+' + pkDigits(r.phone)} style={{ textDecoration: 'none' }}>
+                        📞 Call
+                      </a>
+                    </div>
+                  )}
+                </td>
                 <td>{r.board_marks || '—'}</td>
                 <td>{r.reviewed ? <span className="tag green">Reviewed</span> : <span className="tag">New</span>}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>
