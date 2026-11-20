@@ -385,7 +385,7 @@ function useConfirm() {
   return { ask, dialog };
 }
 
-function Crud({ title, table, columns, rows, loading, reload, onChanged, collegeId, fileField, notify }) {
+function Crud({ title, table, columns, rows, loading, reload, onChanged, collegeId, fileField, notify, extraActions }) {
   const [editing, setEditing] = useState(null); // null | {} (new) | row (edit)
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -449,7 +449,7 @@ function Crud({ title, table, columns, rows, loading, reload, onChanged, college
               <th></th>
             </tr></thead>
             <tbody>
-              {rows.map((r) => (
+              {rows.map((r, i) => (
                 <tr key={r.id}>
                   {columns.filter((c) => !c.hide).map((c) => (
                     <td key={c.key}>
@@ -459,6 +459,7 @@ function Crud({ title, table, columns, rows, loading, reload, onChanged, college
                     </td>
                   ))}
                   <td style={{ whiteSpace: 'nowrap' }}>
+                    {extraActions ? extraActions(r, i, rows) : null}
                     <button className="chip" onClick={() => setEditing({ ...r })}>Edit</button>{' '}
                     <button className="chip chip-danger" onClick={() => del(r)}>Delete</button>
                   </td>
@@ -686,6 +687,32 @@ function AdmissionsSection({ collegeId, notify }) {
 function GallerySection({ collegeId, notify }) {
   const [rows, loading, reload] = useRows(() => fetchGalleryImages(collegeId));
   useEffect(() => { reload(); }, [collegeId]);
+  /* Reorder photos: the public gallery shows gallery_images newest
+     first, so moving a photo swaps its created_at with its neighbour —
+     no new column or migration needed, and the public order follows
+     immediately. (Photo dates are never shown publicly.) */
+  const [moving, setMoving] = useState(false);
+  async function movePhoto(a, b) {
+    if (!a || !b || moving) return;
+    setMoving(true);
+    let aTs = a.created_at, bTs = b.created_at;
+    if (aTs === bTs) aTs = new Date(new Date(aTs).getTime() + 1000).toISOString();
+    try {
+      await adminUpdate('gallery_images', a.id, { created_at: bTs });
+      await adminUpdate('gallery_images', b.id, { created_at: aTs });
+      notify && notify('Photo moved. ✅');
+      reload();
+    } catch (e) { notify && notify('Move failed: ' + e.message, 'err'); }
+    setMoving(false);
+  }
+  const orderButtons = (r, i, list) => (
+    <>
+      <button className="chip" disabled={moving || i === 0} title="Move up — show earlier in the gallery"
+        onClick={() => movePhoto(r, list[i - 1])}>↑</button>{' '}
+      <button className="chip" disabled={moving || i === list.length - 1} title="Move down — show later in the gallery"
+        onClick={() => movePhoto(r, list[i + 1])}>↓</button>{' '}
+    </>
+  );
   /* Drive videos (gallery_media, media_type='video'): one link per video —
      each short gets its own entry with its own title. The public gallery
      already plays these (thumbnail + ▶, Drive preview in the lightbox). */
@@ -694,8 +721,12 @@ function GallerySection({ collegeId, notify }) {
   useEffect(() => { reloadVideos(); }, [collegeId]);
   return (
     <div>
+      <div className="alert ok" style={{ marginBottom: 16 }}>
+        💡 <b>Organise the gallery:</b> use the <b>↑ ↓</b> buttons to change the
+        order photos appear on the public gallery (top of this list = shown first).
+      </div>
       <Crud title="Gallery Photos" table="gallery_images" rows={rows} loading={loading} reload={reload} collegeId={collegeId}
-        fileField="image_url" notify={notify}
+        fileField="image_url" notify={notify} extraActions={orderButtons}
         columns={[
           { key: 'image_url', label: 'Photo', type: 'imageupload', bucket: 'gallery', full: true },
           { key: 'caption', label: 'Caption', full: true },
