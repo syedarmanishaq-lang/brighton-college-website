@@ -260,7 +260,7 @@ export default function CourseView() {
       provider: {
         '@type': 'CollegeOrUniversity',
         name: 'The Brighton College',
-        sameAs: 'https://brighton-college-website.vercel.app/',
+        sameAs: 'https://brightoniankpk.com/',
       },
     };
     if (effectiveThumb) co.image = [effectiveThumb];

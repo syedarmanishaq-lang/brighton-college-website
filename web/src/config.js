@@ -53,7 +53,7 @@ export const COUNTDOWN = {
 
 /* Public site URL — used for canonical URLs, hreflang, sitemap and OG tags.
    Update this after deploy if the final domain differs. */
-export const SITE_URL = 'https://brighton-college-website.vercel.app';
+export const SITE_URL = 'https://brightoniankpk.com';
 
 export const SITE = {
   name: 'The Brighton College of Science',

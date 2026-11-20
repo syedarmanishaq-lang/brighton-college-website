@@ -13,7 +13,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
 const outPath = join(root, 'public', 'sitemap.xml');
 
-const BASE = 'https://brighton-college-website.vercel.app';
+const BASE = 'https://brightoniankpk.com';
 const COLLEGE = 'brighton';
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
 
