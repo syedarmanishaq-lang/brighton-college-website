@@ -454,11 +454,24 @@ body[data-college]:not([data-college="brighton"]) {
 /* ---------- Header brand lockup: emblem and wordmark can never overlap ---------- */
 .brand { min-width: 0; }
 .brand > span:last-child { min-width: 0; }
-@media (max-width: 400px) {
-  .brand { gap: 9px; }
-  .brand-mark-img, .brand-logo { width: 40px; height: 40px; }
-  .brand-name { font-size: 16.5px; }
-  .brand-sub { font-size: 10px; }
+/* ---------- Mobile header: the college name must fit the phone ----------
+   The live name is the full "THE BRIGHTON COLLEGE OF SCIENCE" (33 chars,
+   from the colleges table) — at desktop size with white-space: nowrap it
+   forced the whole page 90px wider than a 360px phone (scrollWidth 450):
+   the title was cut off, the burger was pushed off-screen, and a dark
+   strip showed on the right. On narrow screens the name wraps to two
+   lines, the logo + burger shrink, and the header grows to fit.
+   Desktop is untouched. The dropdown nav anchors to the header's bottom
+   (top: 100%) instead of a fixed 72px, so it still sits flush when the
+   header grows. */
+@media (max-width: 560px) {
+  .header-inner { height: auto; min-height: 64px; padding: 8px 16px; }
+  .brand { flex: 1 1 auto; min-width: 0; gap: 10px; }
+  .brand-mark-img, .brand-logo, .brand-mark { width: 40px; height: 40px; }
+  .brand-name { font-size: 15px; white-space: normal; line-height: 1.2; }
+  .brand-sub { font-size: 10px; white-space: normal; }
+  .burger { min-width: 44px; min-height: 44px; flex: none; }
+  .nav { top: 100%; }
 }
 
 /* ---------- Ad slots (AdSense-ready placeholders) ----------
