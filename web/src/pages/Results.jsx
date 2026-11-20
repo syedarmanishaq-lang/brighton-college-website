@@ -64,6 +64,7 @@ export default function Results() {
       classLevel: cls === 'All' ? null : cls,
       testType: typ === 'All' ? null : typ,
       collegeId: college && college.id,
+      publishedOnly: true,
     }).then((r) => setItems(r || [])).catch(() => {}).finally(() => setLoading(false));
   }, [cls, typ, college]);
 

@@ -517,6 +517,9 @@ function Crud({ title, table, columns, rows, loading, reload, onChanged, college
                         : c.type === 'imageupload'
                           ? <ImageUpload bucket={c.bucket} label={c.label} value={editing[c.key]}
                               onChange={(v) => setEditing({ ...editing, [c.key]: v })} />
+                          : c.type === 'marksgrid'
+                            ? <MarksGrid value={editing[c.key]}
+                                onChange={(v) => setEditing({ ...editing, [c.key]: v })} />
                           : c.type === 'date'
                             ? <input type="datetime-local" value={toLocalInput(editing[c.key])}
                                 onChange={(e) => setEditing({ ...editing, [c.key]: e.target.value ? fromLocalInput(e.target.value) : editing[c.key] })} />
@@ -535,6 +538,59 @@ function Crud({ title, table, columns, rows, loading, reload, onChanged, college
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* Marks grid — edits the result_data JSON (array of
+   {subject, obtained, total} rows, the shape the public Results page
+   renders) as a small table instead of raw JSON text. If the stored
+   value is plain text rather than a JSON array, it is edited as text
+   so nothing is ever wiped by accident. */
+function MarksGrid({ value, onChange }) {
+  let parsed = null;
+  try { parsed = JSON.parse(value || '[]'); } catch { parsed = null; }
+  if (value && !Array.isArray(parsed)) {
+    return (
+      <div>
+        <textarea value={value} rows={4} onChange={(e) => onChange(e.target.value)} />
+        <div className="muted sm" style={{ marginTop: 4 }}>
+          Saved as plain text (not a marks table). Clear it to start a marks grid.
+        </div>
+      </div>
+    );
+  }
+  const rows = Array.isArray(parsed) ? parsed : [];
+  const update = (next) => onChange(JSON.stringify(next));
+  const setCell = (i, key, v) => update(rows.map((r, j) => (j === i ? { ...r, [key]: v } : r)));
+  return (
+    <div>
+      <div className="table-wrap">
+        <table className="data">
+          <thead><tr><th>Subject</th><th>Obtained</th><th>Total</th><th></th></tr></thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i}>
+                <td><input value={r.subject || ''} placeholder="Subject"
+                  onChange={(e) => setCell(i, 'subject', e.target.value)} style={{ minWidth: 120 }} /></td>
+                <td><input value={r.obtained ?? ''} placeholder="Obtained" inputMode="decimal"
+                  onChange={(e) => setCell(i, 'obtained', e.target.value)} style={{ width: 90 }} /></td>
+                <td><input value={r.total ?? ''} placeholder="Total" inputMode="decimal"
+                  onChange={(e) => setCell(i, 'total', e.target.value)} style={{ width: 90 }} /></td>
+                <td><button type="button" className="chip chip-danger"
+                  onClick={() => update(rows.filter((_, j) => j !== i))}>✕</button></td>
+              </tr>
+            ))}
+            {rows.length === 0 && (
+              <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>No marks yet — add a subject below.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <button type="button" className="btn btn-outline" style={{ marginTop: 8 }}
+        onClick={() => update([...rows, { subject: '', obtained: '', total: '' }])}>
+        + Add subject
+      </button>
     </div>
   );
 }
@@ -622,7 +678,9 @@ function ResultsSection({ collegeId, notify }) {
       <div className="alert ok" style={{ marginBottom: 16 }}>
         💡 Add a result three ways: <b>(1)</b> upload a <b>result picture</b> (photo of the sheet),{' '}
         <b>(2)</b> paste a <b>Drive file ID</b> (PDF/image of the result sheet), or{' '}
-        <b>(3)</b> leave both empty and type subject marks as JSON in "Result data (JSON)".
+        <b>(3)</b> leave both empty and enter subject marks in the <b>Marks</b> grid.
+        A result with <b>Published</b> off is a <b>draft</b> — saved, but hidden
+        from the public Results page until you turn it on.
       </div>
       <Crud title="Test Results" table="test_results" rows={rows} loading={loading} reload={reload} collegeId={collegeId}
         fileField="image_url" notify={notify}
@@ -634,8 +692,9 @@ function ResultsSection({ collegeId, notify }) {
           { key: 'image_url', label: 'Result picture (upload)', type: 'imageupload', bucket: 'results', full: true, hide: true },
           { key: 'drive_file_id', label: 'Drive file ID (optional)', full: true, hide: true },
           { key: 'file_type', label: 'File type', type: 'select', opts: FILE_TYPES, def: 'document', hide: true },
-          { key: 'result_data', label: 'Result data (JSON)', type: 'textarea', rows: 4, full: true, hide: true },
+          { key: 'result_data', label: 'Marks', type: 'marksgrid', full: true, hide: true },
           { key: 'published_at', label: 'Published', type: 'date', hide: true, def: new Date().toISOString() },
+          { key: 'published', label: 'Published (live)', type: 'check', def: true },
         ]} />
     </>
   );

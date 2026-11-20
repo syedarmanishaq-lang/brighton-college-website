@@ -63,8 +63,11 @@ export const fetchNewsById = (id, collegeId, opts) => {
 };
 
 /* ---------- Test results ---------- */
-export const fetchResults = ({ classLevel, testType, collegeId } = {}) => {
+/* Public reads show only published results. The admin passes no flag
+   (and sees drafts too) — same pattern as fetchNews/includeDrafts. */
+export const fetchResults = ({ classLevel, testType, collegeId, publishedOnly } = {}) => {
   let q = '/rest/v1/test_results?select=*&order=published_at.desc';
+  if (publishedOnly) q += '&published=eq.true';
   if (classLevel) q += '&class_level=eq.' + encodeURIComponent(classLevel);
   if (testType) q += '&test_type=eq.' + encodeURIComponent(testType);
   return sba.get(scoped(q, collegeId));
