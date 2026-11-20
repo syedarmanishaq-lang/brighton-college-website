@@ -195,6 +195,9 @@ export default function Admissions() {
                 <p className="form-note" style={{ marginTop: 10 }}>
                   Fees are paid at the college office — no online payment needed.
                 </p>
+                {site.feeNote && (
+                  <p style={{ marginTop: 8 }}>{site.feeNote}</p>
+                )}
               </div>
               <div className="card" style={{ marginTop: 20 }}>
                 <h3>Eligibility</h3>

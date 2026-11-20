@@ -17,7 +17,7 @@ import { getLocalCollege, knownLocalSlugs, DEFAULT_COLLEGE_SLUG } from '../data/
 import { NEWS_CATEGORIES, TEST_TYPES, CLASS_LEVELS, FILE_TYPES, PROGRAMS } from '../data/college.js';
 import { clearDriveCache } from '../lib/drive.js';
 import { uploadToR2, driveImageUrl } from '../lib/r2upload.js';
-import { getSetting, setSetting, getSettingByKey, setSettingByKey } from '../lib/settings.js';
+import { getSetting, setSetting, getSettingByKey, setSettingByKey, INFO_FIELDS, getInfoSettings, setInfoSettings } from '../lib/settings.js';
 
 /* Tables scoped to a college — admin writes stamp the active college_id. */
 const COLLEGE_SCOPED_TABLES = ['news_posts', 'courses', 'test_results', 'study_material', 'gallery_images'];
@@ -1033,6 +1033,68 @@ function SettingSwitch({ collegeId, notify, settingKey, title, desc, onLabel, of
   );
 }
 
+/* College info editor — name + tagline live on the `colleges` row,
+   everything else as info_* settings. Blank = fall back to the
+   built-in defaults, so a cleared field never wipes the public site. */
+function InfoSection({ collegeId, colleges, notify }) {
+  const row = (colleges || []).find((c) => c.id === collegeId) || {};
+  const [form, setForm] = useState(null); // null = loading
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const info = await getInfoSettings(collegeId);
+      if (!live) return;
+      const v = { name: row.name || '', tagline: row.tagline || '' };
+      for (const f of INFO_FIELDS) v[f.site] = info[f.site] || '';
+      setForm(v);
+    })().catch(() => {});
+    return () => { live = false; };
+  }, [collegeId]);
+  if (!form) return <div className="loading">Loading college info…</div>;
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  async function save() {
+    setSaving(true);
+    try {
+      const name = (form.name || '').trim();
+      const tagline = (form.tagline || '').trim();
+      if (!name) throw new Error('College name cannot be empty.');
+      await adminUpdate('colleges', collegeId, { name, tagline });
+      const values = {};
+      for (const f of INFO_FIELDS) values[f.site] = form[f.site] || '';
+      await setInfoSettings(collegeId, values);
+      notify && notify('College info saved. ✅ It shows on the public site on the next page load.');
+    } catch (e) {
+      notify && notify('Save failed: ' + e.message, 'err');
+    }
+    setSaving(false);
+  }
+  return (
+    <div>
+      <div className="adm-head"><h2>College Info</h2></div>
+      <p className="muted" style={{ marginBottom: 18 }}>
+        Edit the college details shown across the public site. Leave a field
+        blank to keep the built-in value. Changes appear on the public site
+        on the next page load.
+      </p>
+      <div className="aform" style={{ maxWidth: 640 }}>
+        <Field label="College name" full><input value={form.name} onChange={set('name')} /></Field>
+        <Field label="Tagline" full><input value={form.tagline} onChange={set('tagline')} /></Field>
+        {INFO_FIELDS.map((f) => (
+          <Field key={f.key} label={f.label} full={f.site === 'address' || f.site === 'feeNote'}>
+            {f.site === 'address' || f.site === 'feeNote'
+              ? <textarea rows={2} value={form[f.site]} onChange={set(f.site)} />
+              : <input value={form[f.site]} onChange={set(f.site)} dir="auto" />}
+          </Field>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+        <button className="btn btn-gold" disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save college info'}</button>
+      </div>
+    </div>
+  );
+}
+
 function SettingsSection({ collegeId, notify }) {
   return (
     <div>
@@ -1061,6 +1123,7 @@ const TABS = [
   ['admissions', '📝 Admissions'],
   ['gallery', '📸 Gallery'],
   ['messages', '✉️ Messages'],
+  ['info', '🏫 College Info'],
   ['settings', '⚙️ Settings'],
 ];
 
@@ -1176,6 +1239,7 @@ export default function AdminApp() {
         {tab === 'admissions' && <AdmissionsSection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'gallery' && <GallerySection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'messages' && <MessagesSection collegeId={activeCollegeId} notify={notify} onUnread={setUnreadMsg} />}
+        {tab === 'info' && <InfoSection collegeId={activeCollegeId} colleges={colleges} notify={notify} />}
         {tab === 'settings' && <SettingsSection collegeId={activeCollegeId} notify={notify} />}
       </main>
       <Toasts items={toasts} />

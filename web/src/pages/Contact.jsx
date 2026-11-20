@@ -36,8 +36,9 @@ export default function Contact() {
     setBusy(false);
   }
 
-  const wa = WHATSAPP_NUMBER
-    ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent('Assalam-o-Alaikum! I have a question about The Brighton College.')}`
+  const waNumber = (college && college.whatsapp) || WHATSAPP_NUMBER;
+  const wa = waNumber
+    ? `https://wa.me/${waNumber}?text=${encodeURIComponent('Assalam-o-Alaikum! I have a question about The Brighton College.')}`
     : null;
 
   return (

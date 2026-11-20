@@ -9,7 +9,8 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { LLink } from '../i18n/LangContext.jsx';
 import { SITE } from '../config.js';
 import { getLocalCollege, DEFAULT_COLLEGE_SLUG } from '../data/colleges.js';
-import { backendReady, fetchCollegeBySlug } from '../lib/supabase.js';
+import { backendReady, fetchCollegeBySlug, sba } from '../lib/supabase.js';
+import { INFO_FIELDS } from '../lib/settings.js';
 import { cacheFresh, cacheSet } from '../lib/cache.js';
 
 /* College row cache: 1 hour. The row rarely changes; the cache makes
@@ -46,6 +47,23 @@ export function mapCollegeRow(r) {
     },
     _local: false,
   };
+}
+
+/* Fetch the admin-edited info_* settings for a college (raw rows).
+   Returns { siteKey: value } for non-empty values only. (This lives
+   here — not in settings.js — because settings.js imports useCollege
+   from this file; the loader only needs sba, so no cycle is created.) */
+async function loadInfoSettings(collegeId) {
+  const rows = await sba.get('/rest/v1/site_settings?select=key,value'
+    + '&college_id=eq.' + encodeURIComponent(collegeId));
+  const out = {};
+  for (const r of rows || []) {
+    const f = INFO_FIELDS.find((x) => x.key === r.key);
+    if (f && r.value !== undefined && r.value !== null && String(r.value).trim() !== '') {
+      out[f.site] = String(r.value);
+    }
+  }
+  return out;
 }
 
 const CollegeCtx = createContext({
@@ -115,6 +133,32 @@ export function CollegeProvider({ slug, children }) {
 
   const { college, status } = state;
 
+  /* Admin-edited college info (info_* settings): loads once the real
+     college UUID is known — 'local-brighton' is not a UUID, so it is
+     skipped. Kept as separate state and merged at render time, so it
+     can never clobber the college row or race the row fetch. */
+  const [info, setInfo] = useState(null);
+  useEffect(() => {
+    const cid = college && college.id;
+    if (!backendReady() || !cid || cid === 'local-brighton') { setInfo(null); return; }
+    let alive = true;
+    loadInfoSettings(cid).then((v) => { if (alive) setInfo(v); }).catch(() => {});
+    return () => { alive = false; };
+  }, [college && college.id]);
+
+  /* College with the admin-edited info merged in: `whatsapp` goes on
+     the college object (Footer/Admissions read college.whatsapp),
+     everything else onto the site view (all pages read site.*). */
+  const mergedCollege = useMemo(() => {
+    if (!college || !info) return college;
+    const { whatsapp, ...siteInfo } = info;
+    return {
+      ...college,
+      whatsapp: whatsapp || college.whatsapp,
+      site: { ...college.site, ...siteInfo },
+    };
+  }, [college, info]);
+
   /* Theme wiring. Page <title> is owned by the Seo component per page;
      only the not-found case (no Seo rendered) sets a title here. */
   useEffect(() => {
@@ -131,12 +175,12 @@ export function CollegeProvider({ slug, children }) {
   }, [college, slug]);
 
   const value = useMemo(() => ({
-    college,
-    site: (college && college.site) || SITE,
-    slug: (college && college.slug) || slug || DEFAULT_COLLEGE_SLUG,
+    college: mergedCollege,
+    site: (mergedCollege && mergedCollege.site) || SITE,
+    slug: (mergedCollege && mergedCollege.slug) || slug || DEFAULT_COLLEGE_SLUG,
     status,
-    isDefault: ((college && college.slug) || slug) === DEFAULT_COLLEGE_SLUG,
-  }), [college, slug, status]);
+    isDefault: ((mergedCollege && mergedCollege.slug) || slug) === DEFAULT_COLLEGE_SLUG,
+  }), [mergedCollege, slug, status]);
 
   return <CollegeCtx.Provider value={value}>{children}</CollegeCtx.Provider>;
 }
