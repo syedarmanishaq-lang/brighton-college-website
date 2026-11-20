@@ -11,7 +11,7 @@ import { personSchemas, eventSchema } from '../seo/schema.js';
 import Countdown from '../components/Countdown.jsx';
 import { IMegaphone, ICheck, IBook, IVideo, IDoc, ICap, IImage } from '../components/icons.jsx';
 import AdSlot from '../components/AdSlot.jsx';
-import { useAdmissionsOpen } from '../lib/settings.js';
+import { useAdmissionsOpen, isRealCollegeId } from '../lib/settings.js';
 
 /* Animated count-up numeral (R3). Respects prefers-reduced-motion. */
 function Counter({ to, plain }) {
@@ -57,35 +57,39 @@ const NEWS_TTL_MS = 5 * 60 * 1000;
    UUID key made every full reload miss the cache and re-fetch news. */
 function useTicker() {
   const { college } = useCollege();
+  const collegeId = college && college.id; /* stable dep (see Courses.jsx) */
   const key = `ticker:${(college && college.slug) || 'all'}`;
   const [items, setItems] = useState(() => cacheFresh(key, NEWS_TTL_MS) || []);
   useEffect(() => {
     if (!backendReady()) return;
+    if (!isRealCollegeId(collegeId)) return; // wait for the real UUID
     const cached = cacheFresh(key, NEWS_TTL_MS);
     if (cached) { setItems(cached); return; } // fresh cache: no background re-fetch
-    fetchTickerNotices(college && college.id)
+    fetchTickerNotices(collegeId)
       .then((r) => { setItems(r || []); cacheSet(key, r || []); })
       .catch(() => {});
-  }, [college]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [collegeId]); // eslint-disable-line react-hooks/exhaustive-deps
   return items;
 }
 
 function useNews(limit) {
   const { college } = useCollege();
+  const collegeId = college && college.id; /* stable dep (see Courses.jsx) */
   const key = `news:${limit}:${(college && college.slug) || 'all'}`;
   const [items, setItems] = useState(() => cacheFresh(key, NEWS_TTL_MS) || []);
   const [loading, setLoading] = useState(() => cacheFresh(key, NEWS_TTL_MS) === null);
   useEffect(() => {
     if (!backendReady()) { setLoading(false); return; }
+    if (!isRealCollegeId(collegeId)) return; // wait for the real UUID
     let alive = true;
     const cached = cacheFresh(key, NEWS_TTL_MS);
     if (cached) { setItems(cached); setLoading(false); return; } // fresh cache: no background re-fetch
-    fetchNews(limit, college && college.id)
+    fetchNews(limit, collegeId)
       .then((r) => { if (!alive) return; setItems(r || []); cacheSet(key, r || []); })
       .catch(() => {})
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [limit, college]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [limit, collegeId]); // eslint-disable-line react-hooks/exhaustive-deps
   return { items, loading };
 }
 

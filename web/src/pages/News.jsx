@@ -5,6 +5,7 @@ import { LLink, useLang } from '../i18n/LangContext.jsx';
 import { useCollege, useSite } from '../college/CollegeContext.jsx';
 
 import { fetchNews, backendReady } from '../lib/supabase.js';
+import { isRealCollegeId } from '../lib/settings.js';
 import { cacheFresh, cacheSet } from '../lib/cache.js';
 import { NEWS_CATEGORIES } from '../data/college.js';
 import Seo from '../seo/Seo.jsx';
@@ -58,6 +59,7 @@ function NewsCard({ n, featured }) {
 export default function News() {
   const { t } = useLang();
   const { college } = useCollege();
+  const collegeId = college && college.id; /* stable dep (see Courses.jsx) */
   const cacheKey = `news:all:${(college && college.slug) || 'all'}`;
   const [items, setItems] = useState(() => cacheFresh(cacheKey, NEWS_TTL_MS) || []);
   const [cat, setCat] = useState('All');
@@ -66,10 +68,11 @@ export default function News() {
 
   useEffect(() => {
     if (!backendReady()) { setLoading(false); return; }
+    if (!isRealCollegeId(collegeId)) return; // wait for the real UUID
     const cached = cacheFresh(cacheKey, NEWS_TTL_MS);
     if (cached) { setItems(cached); setLoading(false); return; } // fresh cache: no re-fetch
-    fetchNews(null, college && college.id).then((r) => { setItems(r || []); cacheSet(cacheKey, r || []); }).catch(() => {}).finally(() => setLoading(false));
-  }, [college]);
+    fetchNews(null, collegeId).then((r) => { setItems(r || []); cacheSet(cacheKey, r || []); }).catch(() => {}).finally(() => setLoading(false));
+  }, [collegeId]);
 
   const bySec = sec === 'all' ? items : items.filter((n) => (n.section || 'general') === sec);
   const shown = cat === 'All' ? bySec : bySec.filter((n) => n.category === cat);

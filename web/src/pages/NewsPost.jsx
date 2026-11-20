@@ -4,6 +4,7 @@ import { LLink, useLang } from '../i18n/LangContext.jsx';
 import { useCollege, useSite } from '../college/CollegeContext.jsx';
 
 import { fetchNewsById, backendReady } from '../lib/supabase.js';
+import { isRealCollegeId } from '../lib/settings.js';
 import Seo from '../seo/Seo.jsx';
 import { ISearch } from '../components/icons.jsx';
 import AdSlot from '../components/AdSlot.jsx';
@@ -11,14 +12,16 @@ import AdSlot from '../components/AdSlot.jsx';
 export default function NewsPost() {
   const { t } = useLang();
   const { college } = useCollege();
+  const collegeId = college && college.id; /* stable dep (see Courses.jsx) */
   const { id } = useParams();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!backendReady()) { setLoading(false); return; }
-    fetchNewsById(id, college && college.id).then((r) => setPost(r || null)).catch(() => {}).finally(() => setLoading(false));
-  }, [id, college]);
+    if (!isRealCollegeId(collegeId)) return; // wait for the real UUID
+    fetchNewsById(id, collegeId).then((r) => setPost(r || null)).catch(() => {}).finally(() => setLoading(false));
+  }, [id, collegeId]);
 
   return (
     <>

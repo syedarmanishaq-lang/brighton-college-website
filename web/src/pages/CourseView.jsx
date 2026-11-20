@@ -10,7 +10,7 @@ import { useCollege, useSite } from '../college/CollegeContext.jsx';
 import VideoPlayer from '../components/VideoPlayer.jsx';
 import AdSlot from '../components/AdSlot.jsx';
 import RewardedAd from '../components/RewardedAd.jsx';
-import { useRewardedAds } from '../lib/settings.js';
+import { useRewardedAds, isRealCollegeId } from '../lib/settings.js';
 import { rewardCapReady, markRewardShown, sessionGated, markSessionGated } from '../lib/rewarded.js';
 import { getCourseProgress, markLessonWatched } from '../lib/progress.js';
 import { fetchCourseById, fetchCourses, backendReady } from '../lib/supabase.js';
@@ -108,6 +108,7 @@ export default function CourseView() {
   const { id } = useParams();
   const { t, lang } = useLang();
   const { college } = useCollege();
+  const collegeId = college && college.id; /* stable dep (see Courses.jsx) */
   const [course, setCourse] = useState(null);
   const [folders, setFolders] = useState([]);
   const [rootVideos, setRootVideos] = useState([]);
@@ -122,8 +123,13 @@ export default function CourseView() {
   const rewardedAdsOn = useRewardedAds();
 
   useEffect(() => {
+    /* Wait for the real college UUID before the table lookup: with the
+       local placeholder id the lookup misses and the code falls through
+       to a Drive API call for a UUID that is not a Drive folder — so a
+       direct (refreshed / shared) course link showed an error. */
+    if (backendReady() && !isRealCollegeId(collegeId)) return;
     if (!backendReady() && !driveReady()) { setLoading(false); return; }
-    fetchCourseById(id, college && college.id)
+    fetchCourseById(id, collegeId)
       .then(async (c) => {
         if (c) {
           setCourse(c);
@@ -159,7 +165,7 @@ export default function CourseView() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [id]);
+  }, [id, collegeId]);
 
   // Progress (R6): restore watched marks via progress.js
   useEffect(() => {
@@ -173,10 +179,11 @@ export default function CourseView() {
      excluding the current one. */
   useEffect(() => {
     if (!backendReady()) return;
-    fetchCourses({ collegeId: college && college.id })
+    if (!isRealCollegeId(collegeId)) return; // wait for the real UUID
+    fetchCourses({ collegeId })
       .then((all) => setRelated((all || []).filter((c) => String(c.id) !== String(id)).slice(0, 3)))
       .catch(() => {});
-  }, [id, college]);
+  }, [id, collegeId]);
 
   function playVideo(v) {
     setWatch(v);

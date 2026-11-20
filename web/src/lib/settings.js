@@ -10,6 +10,24 @@ import { useCollege } from '../college/CollegeContext.jsx';
 
 const LS_PREFIX = 'bcp_setting_';
 
+/* The local-registry college id ('local-brighton') is a placeholder, not
+   a real UUID: a Supabase query scoped with it can never match a row,
+   so any fetch using it is a wasted request. Callers skip the network
+   until the real UUID arrives (the localStorage value is the fallback
+   meanwhile, and its defaults match the live switches). */
+export const PLACEHOLDER_COLLEGE_ID = 'local-brighton';
+export const isRealCollegeId = (id) => !!id && id !== PLACEHOLDER_COLLEGE_ID;
+
+/* In-memory dedupe for single-key reads: every component that asks for
+   the same (college, key) shares ONE in-flight request, and a value
+   fetched within the last 60s is reused without a new request. Before
+   this, each AdSlot / status hook fired its own query — and re-fired
+   every time the college object changed identity — so a page load made
+   3-4 identical show_ads requests plus 2 admissions_open ones. */
+const inflight = new Map(); /* `${collegeId}:${key}` -> Promise<string> */
+const freshCache = new Map(); /* `${collegeId}:${key}` -> { at, value } */
+const SETTING_TTL_MS = 60 * 1000;
+
 export function localSetting(key, def) {
   try {
     const v = localStorage.getItem(LS_PREFIX + key);
@@ -22,20 +40,34 @@ export function saveLocalSetting(key, value) {
 }
 
 /* Read one setting from Supabase; falls back to the local value (or def)
-   when the backend is offline or the row is missing. */
+   when the backend is offline or the row is missing. Identical concurrent
+   reads share one request (see inflight cache above); a placeholder
+   college id never hits the network at all. */
 export async function getSetting(collegeId, key, def) {
-  if (!backendReady() || !collegeId) return localSetting(key, def);
-  try {
-    const q = '/rest/v1/site_settings?select=value'
-      + '&college_id=eq.' + encodeURIComponent(collegeId)
-      + '&key=eq.' + encodeURIComponent(key) + '&limit=1';
-    const rows = await sba.get(q);
-    if (rows && rows[0] && rows[0].value !== undefined && rows[0].value !== null) {
-      saveLocalSetting(key, String(rows[0].value));
-      return String(rows[0].value);
-    }
-  } catch {}
-  return localSetting(key, def);
+  if (!backendReady() || !isRealCollegeId(collegeId)) return localSetting(key, def);
+  const ck = collegeId + ':' + key;
+  const fresh = freshCache.get(ck);
+  if (fresh && Date.now() - fresh.at < SETTING_TTL_MS) return fresh.value;
+  const pending = inflight.get(ck);
+  if (pending) return pending;
+  const p = (async () => {
+    try {
+      const q = '/rest/v1/site_settings?select=value'
+        + '&college_id=eq.' + encodeURIComponent(collegeId)
+        + '&key=eq.' + encodeURIComponent(key) + '&limit=1';
+      const rows = await sba.get(q);
+      if (rows && rows[0] && rows[0].value !== undefined && rows[0].value !== null) {
+        const v = String(rows[0].value);
+        saveLocalSetting(key, v);
+        freshCache.set(ck, { at: Date.now(), value: v });
+        return v;
+      }
+    } catch {}
+    return localSetting(key, def);
+  })();
+  inflight.set(ck, p);
+  p.finally(() => { if (inflight.get(ck) === p) inflight.delete(ck); });
+  return p;
 }
 
 /* Write one setting (upsert by college_id+key). Also updates the local
@@ -94,17 +126,20 @@ export async function setSettingByKey(key, value) {
 }
 
 /* React hook: live value of a setting ('true'/'false' strings).
-   Starts from localStorage so first paint is never wrong. */
+   Starts from localStorage so first paint is never wrong.
+   Depends on the college ID string (stable), not the college object
+   (which changes identity when the admin-edited info merges in) — the
+   old object dep re-fired this fetch on every college swap. */
 export function useSiteSetting(key, def) {
   const [value, setValue] = useState(() => localSetting(key, def));
   const { college } = useCollege();
+  const collegeId = college && college.id;
   useEffect(() => {
     let live = true;
-    const cid = college && college.id;
-    if (!backendReady() || !cid) return undefined;
-    getSetting(cid, key, def).then((v) => { if (live) setValue(v); }).catch(() => {});
+    if (!backendReady() || !isRealCollegeId(collegeId)) return undefined;
+    getSetting(collegeId, key, def).then((v) => { if (live) setValue(v); }).catch(() => {});
     return () => { live = false; };
-  }, [college, key, def]);
+  }, [collegeId, key, def]);
   return value;
 }
 

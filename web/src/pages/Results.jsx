@@ -3,6 +3,7 @@ import { LLink, useLang } from '../i18n/LangContext.jsx';
 import { useCollege, useSite } from '../college/CollegeContext.jsx';
 
 import { fetchResults, backendReady } from '../lib/supabase.js';
+import { isRealCollegeId } from '../lib/settings.js';
 import { cacheFresh, cacheSet } from '../lib/cache.js';
 import { drivePreviewUrl } from '../lib/drive.js';
 import { CLASS_LEVELS, TEST_TYPES } from '../data/college.js';
@@ -58,6 +59,7 @@ function ResultBody({ r }) {
 export default function Results() {
   const { t } = useLang();
   const { college } = useCollege();
+  const collegeId = college && college.id; /* stable dep (see Courses.jsx) */
   const [items, setItems] = useState(() => cacheFresh(`results:All:All:${(college && college.slug) || 'all'}`, RESULTS_TTL_MS) || []);
   const [cls, setCls] = useState('All');
   const [typ, setTyp] = useState('All');
@@ -66,16 +68,17 @@ export default function Results() {
 
   useEffect(() => {
     if (!backendReady()) { setLoading(false); return; }
+    if (!isRealCollegeId(collegeId)) return; // wait for the real UUID
     const cacheKey = `results:${cls}:${typ}:${(college && college.slug) || 'all'}`;
     const cached = cacheFresh(cacheKey, RESULTS_TTL_MS);
     if (cached) { setItems(cached); setLoading(false); return; } // fresh cache: no re-fetch
     fetchResults({
       classLevel: cls === 'All' ? null : cls,
       testType: typ === 'All' ? null : typ,
-      collegeId: college && college.id,
+      collegeId,
       publishedOnly: true,
     }).then((r) => { setItems(r || []); cacheSet(cacheKey, r || []); }).catch(() => {}).finally(() => setLoading(false));
-  }, [cls, typ, college]);
+  }, [cls, typ, collegeId]);
 
   return (
     <>

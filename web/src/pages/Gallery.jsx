@@ -3,6 +3,7 @@ import { LLink, useLang } from '../i18n/LangContext.jsx';
 import { useCollege, useSite } from '../college/CollegeContext.jsx';
 
 import { fetchGallery, fetchGalleryImages, backendReady } from '../lib/supabase.js';
+import { isRealCollegeId } from '../lib/settings.js';
 import { cacheFresh, cacheSet } from '../lib/cache.js';
 import { driveDownloadUrl } from '../lib/drive.js';
 import Seo from '../seo/Seo.jsx';
@@ -151,6 +152,7 @@ function VideoPoster({ item }) {
 export default function Gallery() {
   const { t, lang } = useLang();
   const { college } = useCollege();
+  const collegeId = college && college.id; /* stable dep (see Courses.jsx) */
   const cacheKey = `gallery:all:${(college && college.slug) || 'all'}`;
   const [items, setItems] = useState(() => cacheFresh(cacheKey, GALLERY_TTL_MS) || []);
   const [loading, setLoading] = useState(() => cacheFresh(cacheKey, GALLERY_TTL_MS) === null);
@@ -158,11 +160,12 @@ export default function Gallery() {
 
   useEffect(() => {
     if (!backendReady()) { setItems(DEFAULT_GALLERY); setLoading(false); return; }
+    if (!isRealCollegeId(collegeId)) return; // wait for the real UUID
     const cached = cacheFresh(cacheKey, GALLERY_TTL_MS);
     if (cached) { setItems(cached); setLoading(false); return; } // fresh cache: no re-fetch
     Promise.all([
-      fetchGallery(college && college.id).catch(() => []),
-      fetchGalleryImages(college && college.id).catch(() => []),
+      fetchGallery(collegeId).catch(() => []),
+      fetchGalleryImages(collegeId).catch(() => []),
     ]).then(([r, uploaded]) => {
       // Map gallery_media rows to display format
       const driveMapped = (r && r.length) ? r.filter((m) => m.is_active !== false).map((m) => ({
@@ -193,7 +196,7 @@ export default function Gallery() {
       setItems(shown);
       cacheSet(cacheKey, shown);
     }).catch(() => setItems(DEFAULT_GALLERY)).finally(() => setLoading(false));
-  }, [college]);
+  }, [collegeId]);
 
   /* Single list: the old page rendered the same 11 items twice
      ("Latest from Facebook" + "All Photos"). While loading, the

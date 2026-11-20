@@ -11,8 +11,16 @@ export default function BookReader() {
   const { t, lang } = useLang();
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
+  /* The Drive viewer itself is slow for big books (~50s for a 49MB PDF
+     is Google's limit, not ours) — but the page used to show a blank
+     white iframe box with no feedback at all while it loaded. Show a
+     plain "opening…" state until the viewer shell reports loaded, with
+     the Download button right there so a slow connection can skip the
+     viewer entirely. */
+  const [frameLoaded, setFrameLoaded] = useState(false);
 
   useEffect(() => {
+    setFrameLoaded(false);
     if (!backendReady() || !id) { setLoading(false); return; }
     sba.get(`/rest/v1/books?select=*&id=eq.${id}&limit=1`)
       .then((r) => setBook(r && r[0] ? r[0] : null))
@@ -77,10 +85,23 @@ export default function BookReader() {
               <iframe
                 src={embedUrl}
                 title={book.title}
-                style={{ width: '100%', height: 'calc(100dvh - 230px)', minHeight: 520, border: '1px solid var(--line)', borderRadius: 12 }}
+                onLoad={() => setFrameLoaded(true)}
+                style={{ width: '100%', height: 'calc(100dvh - 230px)', minHeight: 520, border: '1px solid var(--line)', borderRadius: 12, display: frameLoaded ? 'block' : 'none' }}
                 allow="autoplay; fullscreen"
                 allowFullScreen
               />
+              {!frameLoaded && (
+                <div style={{ width: '100%', minHeight: 520, border: '1px solid var(--line)', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32, textAlign: 'center' }}>
+                  <div className="loading" style={{ fontSize: 17, fontWeight: 700 }}>
+                    {lang === 'ur' ? 'کتاب کھل رہی ہے…' : 'Opening the book…'}
+                  </div>
+                  <p className="muted" style={{ margin: 0, maxWidth: 460 }}>
+                    {lang === 'ur'
+                      ? 'ڈرائیو ویوور بڑی کتاب کو صفحہ بہ صفحہ لوڈ کرتا ہے — اس میں وقت لگ سکتا ہے۔ تیز پڑھنے کے لیے اوپر Download پر ٹیپ کریں۔'
+                      : 'The Drive viewer loads a large book page by page, so it can take a while. For the fastest read, tap Download above.'}
+                  </p>
+                </div>
+              )}
               <p className="muted" style={{ textAlign: 'center', marginTop: 12, fontSize: 14 }}>
                 {lang === 'ur'
                   ? (book.file_size_mb

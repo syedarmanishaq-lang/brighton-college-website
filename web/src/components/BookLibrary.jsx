@@ -123,12 +123,14 @@ export default function BookLibrary({ kind }) {
     if (!backendReady()) { setLoading(false); setFailed(true); return; }
     const cached = cacheFresh(cacheKey, BOOKS_TTL_MS);
     if (cached) { setBooks(cached); setLoading(false); return; } // fresh cache: no re-fetch
-    const timer = setTimeout(() => {
-      fetchBooks({ kind })
-        .then((r) => { if (live) { setBooks(r || []); cacheSet(cacheKey, r || []); setLoading(false); } })
-        .catch(() => { if (live) { setFailed(true); setLoading(false); } });
-    }, 250); // debounce for search typing
-    return () => { live = false; clearTimeout(timer); };
+    /* No artificial delay: the old 250ms setTimeout ("debounce for search
+       typing") fired on every first load even though this effect only
+       runs when `kind` changes — it was 250ms of pure wait on a page
+       the user already finds slow. */
+    fetchBooks({ kind })
+      .then((r) => { if (live) { setBooks(r || []); cacheSet(cacheKey, r || []); setLoading(false); } })
+      .catch(() => { if (live) { setFailed(true); setLoading(false); } });
+    return () => { live = false; };
   }, [kind]);
 
   // Re-filter client-side for instant chip response (data already loaded)

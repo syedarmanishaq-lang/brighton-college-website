@@ -3,6 +3,7 @@ import { LLink, useLang } from '../i18n/LangContext.jsx';
 import { useCollege, useSite } from '../college/CollegeContext.jsx';
 
 import { fetchMaterial, backendReady } from '../lib/supabase.js';
+import { isRealCollegeId } from '../lib/settings.js';
 import { driveListAll, drivePreviewUrl, driveDownloadUrl, driveReady, isFolder } from '../lib/drive.js';
 import { DRIVE_FOLDER_ID } from '../config.js';
 import { CLASS_LEVELS } from '../data/college.js';
@@ -146,14 +147,16 @@ function DriveBrowser() {
 export default function Material() {
   const { t } = useLang();
   const { college } = useCollege();
+  const collegeId = college && college.id; /* stable dep (see Courses.jsx) */
   const [curated, setCurated] = useState([]);
   const [cls, setCls] = useState('All');
 
   useEffect(() => {
     if (!backendReady()) return;
-    fetchMaterial({ classLevel: cls === 'All' ? null : cls, collegeId: college && college.id })
+    if (!isRealCollegeId(collegeId)) return; // wait for the real UUID
+    fetchMaterial({ classLevel: cls === 'All' ? null : cls, collegeId })
       .then((r) => setCurated(r || [])).catch(() => {});
-  }, [cls, college]);
+  }, [cls, collegeId]);
 
   return (
     <>

@@ -6,6 +6,7 @@ import { LLink, useLang } from '../i18n/LangContext.jsx';
 import { useCollege, useSite } from '../college/CollegeContext.jsx';
 
 import { fetchCourses, backendReady } from '../lib/supabase.js';
+import { isRealCollegeId } from '../lib/settings.js';
 import { driveListAll, driveFirstVideoThumb, driveExpandBundle, driveReady, isFolder, cleanCourseName, courseThumbFor, courseArtFor, courseCategoryFor, courseHue, uniqueCourseThumb } from '../lib/drive.js';
 import { fetchDriveCourseIndex } from '../lib/supabase.js';
 import { DRIVE_FOLDER_ID } from '../config.js';
@@ -64,6 +65,9 @@ export default function Courses() {
   const [driveCourses, setDriveCourses] = useState([]);
   const [driveThumbs, setDriveThumbs] = useState({}); /* folderId -> real video thumbnail */
   const [loading, setLoading] = useState(true);
+  /* Stable college-id string for the data effect below (the college
+     object itself changes identity when the admin info merges in). */
+  const collegeId = college && college.id;
   /* Search + category filter (client-side over the already-loaded lists,
      so filtering costs no extra requests). Search input is 16px so iOS
      Safari does not auto-zoom on focus. */
@@ -123,6 +127,14 @@ export default function Courses() {
 
   useEffect(() => {
     let live = true;
+    /* The effect keys on the college ID string (stable), not the college
+       object (which changes identity when the admin info merges in and
+       re-fired this whole fetch chain). It waits for the REAL college
+       UUID: the local placeholder id ('local-brighton') can never match
+       a row, so the old code fetched the table with a bogus id (0 rows),
+       fell through to the Drive index, then fetched everything AGAIN
+       once the real id arrived. */
+    if (backendReady() && !isRealCollegeId(collegeId)) return undefined;
     /* The courses TABLE is the live source now (managed from the admin
        panel) — the Drive index and the live Drive scan below are only
        a fallback for when the table is empty, so a course never shows
@@ -132,7 +144,7 @@ export default function Courses() {
       let tableCourses = [];
       if (backendReady()) {
         try {
-          const r = await fetchCourses({ collegeId: college && college.id });
+          const r = await fetchCourses({ collegeId });
           tableCourses = r || [];
           /* Same title dedupe as the Drive paths below: the table holds
              both folders for 9 twice-copied titles — the listing shows
@@ -143,7 +155,7 @@ export default function Courses() {
       let usedIndex = false;
       if (backendReady() && live && tableCourses.length === 0) {
         try {
-          const idx = await fetchDriveCourseIndex(college && college.id);
+          const idx = await fetchDriveCourseIndex(collegeId);
           if (!live) return;
           if (idx && idx.length) {
             usedIndex = true;
@@ -185,7 +197,7 @@ export default function Courses() {
       if (live) setLoading(false);
     })();
     return () => { live = false; };
-  }, [college]);
+  }, [collegeId]);
 
   return (
     <>
