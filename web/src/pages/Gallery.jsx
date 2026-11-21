@@ -22,27 +22,48 @@ const DRIVE_FULL = (id) => `https://drive.google.com/thumbnail?id=${id}&sz=w1000
 /* Fallback stream URL if the Drive API stream ever fails (e.g. key revoked). */
 const DRIVE_UC = (id) => `https://drive.google.com/uc?export=download&id=${id}`;
 
+/* The 5 HD gallery photos moved from Drive to Cloudflare R2 (2026-11-21):
+   same files, served from Cloudflare's edge instead of Drive thumbnails
+   (faster, no Drive rate limits). Grid uses the w400 WebP thumb, the
+   lightbox the full original. Videos stay on Drive — only these 5 photo
+   ids resolve to R2. R2_PHOTOS maps a Drive file id to its R2 URLs so
+   the live gallery_media rows switch to R2 with NO data change. */
+const R2_PUBLIC = 'https://pub-657f762b08ff455cb0cff1c7f48b2217.r2.dev';
+const R2_PHOTO = (slug) => ({
+  thumb: `${R2_PUBLIC}/gallery/${slug}-thumb.webp`,
+  full: `${R2_PUBLIC}/gallery/${slug}.jpg`,
+});
+const R2_PHOTOS = {
+  '1v60IYWhMxsP1pVO_tGq2iGVHP7X-yQ6y': R2_PHOTO('campus'),
+  '1CYTnm--mHOCB8USgCd8Sb63zlUxcpD4s': R2_PHOTO('principal'),
+  '1m2WFVran1pLgVobiH5LIK-gWHxPGFeBz': R2_PHOTO('teacher-1'),
+  '1QdxTT3QaqwsuS71eK0EI7uLBgrMY0jFM': R2_PHOTO('teacher-2'),
+  '1d44ayMWKSOkD7IzKLYkssK8OpSWvUAMc': R2_PHOTO('teacher-3'),
+};
+/* R2 URLs for a Drive photo id, or null for videos / unknown ids. */
+const r2Photo = (driveId) => R2_PHOTOS[driveId] || null;
+
 /* Two videos open on a black frame, so Drive's poster thumbnail is a
    black box — the grid shows a real video frame instead (VideoPoster).
    These overrides survive only as the lightbox poster and as the
    VideoPoster error fallback; they are NOT grid thumbnails any more,
    so the photos are no longer shown twice under two captions. */
 const VIDEO_THUMB_OVERRIDE = {
-  '1uWkavYa8PI1RsFVj1dIjVZh1OnRzLHJl': DRIVE_THUMB('1m2WFVran1pLgVobiH5LIK-gWHxPGFeBz'),
-  '1tixCpPe3WDZ0xTe8UKpaF_SUs05ikMum': DRIVE_THUMB('1QdxTT3QaqwsuS71eK0EI7uLBgrMY0jFM'),
+  '1uWkavYa8PI1RsFVj1dIjVZh1OnRzLHJl': R2_PHOTOS['1m2WFVran1pLgVobiH5LIK-gWHxPGFeBz'].thumb,
+  '1tixCpPe3WDZ0xTe8UKpaF_SUs05ikMum': R2_PHOTOS['1QdxTT3QaqwsuS71eK0EI7uLBgrMY0jFM'].thumb,
 };
 const VIDEO_THUMB_OVERRIDE_FULL = {
-  '1uWkavYa8PI1RsFVj1dIjVZh1OnRzLHJl': DRIVE_FULL('1m2WFVran1pLgVobiH5LIK-gWHxPGFeBz'),
-  '1tixCpPe3WDZ0xTe8UKpaF_SUs05ikMum': DRIVE_FULL('1QdxTT3QaqwsuS71eK0EI7uLBgrMY0jFM'),
+  '1uWkavYa8PI1RsFVj1dIjVZh1OnRzLHJl': R2_PHOTOS['1m2WFVran1pLgVobiH5LIK-gWHxPGFeBz'].full,
+  '1tixCpPe3WDZ0xTe8UKpaF_SUs05ikMum': R2_PHOTOS['1QdxTT3QaqwsuS71eK0EI7uLBgrMY0jFM'].full,
 };
 const FB_MEDIA = [
-  { id: 'fb-campus', type: 'image', src: DRIVE_THUMB('1v60IYWhMxsP1pVO_tGq2iGVHP7X-yQ6y'), full: DRIVE_FULL('1v60IYWhMxsP1pVO_tGq2iGVHP7X-yQ6y'), caption: 'Campus — Aerial View' },
-  { id: 'fb-principal', type: 'image', src: DRIVE_THUMB('1CYTnm--mHOCB8USgCd8Sb63zlUxcpD4s'), full: DRIVE_FULL('1CYTnm--mHOCB8USgCd8Sb63zlUxcpD4s'), caption: 'Principal — Mr. Fayoun Khan' },
-  { id: 'fb-teacher-1', type: 'image', src: DRIVE_THUMB('1m2WFVran1pLgVobiH5LIK-gWHxPGFeBz'), full: DRIVE_FULL('1m2WFVran1pLgVobiH5LIK-gWHxPGFeBz'), caption: 'Welcome Party 2026' },
-  { id: 'fb-teacher-2', type: 'image', src: DRIVE_THUMB('1QdxTT3QaqwsuS71eK0EI7uLBgrMY0jFM'), full: DRIVE_FULL('1QdxTT3QaqwsuS71eK0EI7uLBgrMY0jFM'), caption: 'Teachers Address' },
-  { id: 'fb-teacher-3', type: 'image', src: DRIVE_THUMB('1d44ayMWKSOkD7IzKLYkssK8OpSWvUAMc'), full: DRIVE_FULL('1d44ayMWKSOkD7IzKLYkssK8OpSWvUAMc'), caption: 'Welcome Party 2026' },
-  { id: 'fb-vid-welcome', type: 'video', drive_file_id: '1uWkavYa8PI1RsFVj1dIjVZh1OnRzLHJl', thumb: DRIVE_THUMB('1m2WFVran1pLgVobiH5LIK-gWHxPGFeBz'), thumbFull: DRIVE_FULL('1m2WFVran1pLgVobiH5LIK-gWHxPGFeBz'), caption: 'Welcome Party 2026 — Highlights' },
-  { id: 'fb-vid-excellence', type: 'video', drive_file_id: '1tixCpPe3WDZ0xTe8UKpaF_SUs05ikMum', thumb: DRIVE_THUMB('1QdxTT3QaqwsuS71eK0EI7uLBgrMY0jFM'), thumbFull: DRIVE_FULL('1QdxTT3QaqwsuS71eK0EI7uLBgrMY0jFM'), caption: 'Excellence is Tested, Not Just Taught' },
+  { id: 'fb-campus', type: 'image', src: R2_PHOTO('campus').thumb, full: R2_PHOTO('campus').full, caption: 'Campus — Aerial View' },
+  { id: 'fb-principal', type: 'image', src: R2_PHOTO('principal').thumb, full: R2_PHOTO('principal').full, caption: 'Principal — Mr. Fayoun Khan' },
+  { id: 'fb-teacher-1', type: 'image', src: R2_PHOTO('teacher-1').thumb, full: R2_PHOTO('teacher-1').full, caption: 'Welcome Party 2026' },
+  { id: 'fb-teacher-2', type: 'image', src: R2_PHOTO('teacher-2').thumb, full: R2_PHOTO('teacher-2').full, caption: 'Teachers Address' },
+  { id: 'fb-teacher-3', type: 'image', src: R2_PHOTO('teacher-3').thumb, full: R2_PHOTO('teacher-3').full, caption: 'Welcome Party 2026' },
+  { id: 'fb-vid-welcome', type: 'video', drive_file_id: '1uWkavYa8PI1RsFVj1dIjVZh1OnRzLHJl', thumb: R2_PHOTO('teacher-1').thumb, thumbFull: R2_PHOTO('teacher-1').full, caption: 'Welcome Party 2026 — Highlights' },
+  { id: 'fb-vid-excellence', type: 'video', drive_file_id: '1tixCpPe3WDZ0xTe8UKpaF_SUs05ikMum', thumb: R2_PHOTO('teacher-2').thumb, thumbFull: R2_PHOTO('teacher-2').full, caption: 'Excellence is Tested, Not Just Taught' },
   { id: 'fb-vid-hockey', type: 'video', drive_file_id: '1kpyDlI_G5TBKkWBplrMWGjzJJG0eCIgQ', thumb: DRIVE_THUMB('1kpyDlI_G5TBKkWBplrMWGjzJJG0eCIgQ'), thumbFull: DRIVE_FULL('1kpyDlI_G5TBKkWBplrMWGjzJJG0eCIgQ'), caption: 'Hockey — Through to the Semi-Final' },
   { id: 'fb-vid-mdcat', type: 'video', drive_file_id: '17qy7ZK-Lf1aeTokWq-8hGJoiyJQpTO6n', thumb: DRIVE_THUMB('17qy7ZK-Lf1aeTokWq-8hGJoiyJQpTO6n'), thumbFull: DRIVE_FULL('17qy7ZK-Lf1aeTokWq-8hGJoiyJQpTO6n'), caption: 'MDCAT 2026 Qualifier — Munazza Hamid' },
   { id: 'fb-reel-teachers', type: 'video', drive_file_id: '1rY42FQteXJDDo1OS0ZB6L5RRTD-bHVmc', thumb: DRIVE_THUMB('1rY42FQteXJDDo1OS0ZB6L5RRTD-bHVmc'), thumbFull: DRIVE_FULL('1rY42FQteXJDDo1OS0ZB6L5RRTD-bHVmc'), caption: 'Invitation for Our Respected Teachers' },
@@ -52,11 +73,11 @@ const FB_MEDIA = [
 /* HD Gallery — all photos from the college official Facebook page.
    Old blurry prospectus crops REMOVED (see hidden_files/gallery-blurry-removed.md). */
 const DEFAULT_GALLERY = [
-  { id: 'hd-campus', image_url: DRIVE_THUMB('1v60IYWhMxsP1pVO_tGq2iGVHP7X-yQ6y'), full: DRIVE_FULL('1v60IYWhMxsP1pVO_tGq2iGVHP7X-yQ6y'), caption: 'Campus' },
-  { id: 'hd-principal', image_url: DRIVE_THUMB('1CYTnm--mHOCB8USgCd8Sb63zlUxcpD4s'), full: DRIVE_FULL('1CYTnm--mHOCB8USgCd8Sb63zlUxcpD4s'), caption: 'Principal — Mr. Fayoun Khan' },
-  { id: 'hd-teacher-1', image_url: DRIVE_THUMB('1m2WFVran1pLgVobiH5LIK-gWHxPGFeBz'), full: DRIVE_FULL('1m2WFVran1pLgVobiH5LIK-gWHxPGFeBz'), caption: 'Welcome Party 2026' },
-  { id: 'hd-teacher-2', image_url: DRIVE_THUMB('1QdxTT3QaqwsuS71eK0EI7uLBgrMY0jFM'), full: DRIVE_FULL('1QdxTT3QaqwsuS71eK0EI7uLBgrMY0jFM'), caption: 'Teachers Address' },
-  { id: 'hd-teacher-3', image_url: DRIVE_THUMB('1d44ayMWKSOkD7IzKLYkssK8OpSWvUAMc'), full: DRIVE_FULL('1d44ayMWKSOkD7IzKLYkssK8OpSWvUAMc'), caption: 'Welcome Party 2026' },
+  { id: 'hd-campus', image_url: R2_PHOTO('campus').thumb, full: R2_PHOTO('campus').full, caption: 'Campus' },
+  { id: 'hd-principal', image_url: R2_PHOTO('principal').thumb, full: R2_PHOTO('principal').full, caption: 'Principal — Mr. Fayoun Khan' },
+  { id: 'hd-teacher-1', image_url: R2_PHOTO('teacher-1').thumb, full: R2_PHOTO('teacher-1').full, caption: 'Welcome Party 2026' },
+  { id: 'hd-teacher-2', image_url: R2_PHOTO('teacher-2').thumb, full: R2_PHOTO('teacher-2').full, caption: 'Teachers Address' },
+  { id: 'hd-teacher-3', image_url: R2_PHOTO('teacher-3').thumb, full: R2_PHOTO('teacher-3').full, caption: 'Welcome Party 2026' },
 ];
 
 /* Native video player for the lightbox.
@@ -168,17 +189,22 @@ export default function Gallery() {
       fetchGalleryImages(collegeId).catch(() => []),
     ]).then(([r, uploaded]) => {
       // Map gallery_media rows to display format
-      const driveMapped = (r && r.length) ? r.filter((m) => m.is_active !== false).map((m) => ({
-        id: m.id,
-        type: m.media_type === 'video' ? 'video' : 'image',
-        src: m.media_type === 'video' ? null : DRIVE_THUMB(m.drive_file_id),
-        full: DRIVE_FULL(m.drive_file_id),
-        thumb: VIDEO_THUMB_OVERRIDE[m.drive_file_id] || DRIVE_THUMB(m.drive_file_id),
-        thumbFull: VIDEO_THUMB_OVERRIDE_FULL[m.drive_file_id] || DRIVE_FULL(m.drive_file_id),
-        drive_file_id: m.drive_file_id,
-        caption: m.title,
-        description: m.description,
-      })) : [];
+      const driveMapped = (r && r.length) ? r.filter((m) => m.is_active !== false).map((m) => {
+        // The 5 HD photos live on R2 now (r2Photo maps their Drive ids);
+        // videos and any other rows keep their Drive URLs.
+        const r2 = r2Photo(m.drive_file_id);
+        return {
+          id: m.id,
+          type: m.media_type === 'video' ? 'video' : 'image',
+          src: m.media_type === 'video' ? null : (r2 ? r2.thumb : DRIVE_THUMB(m.drive_file_id)),
+          full: r2 ? r2.full : DRIVE_FULL(m.drive_file_id),
+          thumb: VIDEO_THUMB_OVERRIDE[m.drive_file_id] || (r2 ? r2.thumb : DRIVE_THUMB(m.drive_file_id)),
+          thumbFull: VIDEO_THUMB_OVERRIDE_FULL[m.drive_file_id] || (r2 ? r2.full : DRIVE_FULL(m.drive_file_id)),
+          drive_file_id: m.drive_file_id,
+          caption: m.title,
+          description: m.description,
+        };
+      }) : [];
       // Admin-uploaded photos (gallery_images) go first, newest first
       const uploadedMapped = (uploaded || []).filter((g) => g.image_url).map((g) => ({
         id: g.id,
