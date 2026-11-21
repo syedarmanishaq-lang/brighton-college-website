@@ -4,7 +4,7 @@
    so it works on every device. localStorage only holds a fallback copy
    in the browser where the password was set. */
 import './admin.css';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   sba, backendReady,
   fetchNews, fetchCourses, fetchResults, fetchMaterial, fetchBooks, fetchGallery, fetchGalleryPhotos, fetchGalleryImages,
@@ -18,6 +18,7 @@ import { NEWS_CATEGORIES, TEST_TYPES, CLASS_LEVELS, FILE_TYPES, PROGRAMS } from 
 import { clearDriveCache } from '../lib/drive.js';
 import { uploadToR2, driveImageUrl } from '../lib/r2upload.js';
 import { getSetting, setSetting, getSettingByKey, setSettingByKey, INFO_FIELDS, getInfoSettings, setInfoSettings } from '../lib/settings.js';
+import { WHATSAPP_NUMBER } from '../config.js';
 
 /* Tables scoped to a college — admin writes stamp the active college_id. */
 const COLLEGE_SCOPED_TABLES = ['news_posts', 'courses', 'test_results', 'study_material', 'gallery_images'];
@@ -261,8 +262,10 @@ function StorageMeter() {
 function useRows(fetcher) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const reload = () => {
-    setLoading(true);
+  /* silent = refresh in the background without the "Loading…" flash
+     (used by auto-refresh polling — the list just updates in place). */
+  const reload = (silent) => {
+    if (!silent) setLoading(true);
     fetcher().then((r) => setRows(r || [])).catch(() => setRows([])).finally(() => setLoading(false));
   };
   useEffect(reload, []);
@@ -779,6 +782,18 @@ function AdmissionsSection({ collegeId, notify }) {
   const [saving, setSaving] = useState(false);
   const { ask, dialog } = useConfirm();
   useEffect(() => { reload(); }, [collegeId]);
+  /* Auto-refresh the list while the tab is open, so a new enquiry
+     appears without a manual Refresh click. Silent (no loading flash),
+     skipped while the browser tab is hidden — one small query / 30s. */
+  const reloadRef = useRef(reload);
+  useEffect(() => { reloadRef.current = reload; });
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (document.hidden) return;
+      reloadRef.current(true);
+    }, 30000);
+    return () => clearInterval(t);
+  }, [collegeId]);
   useEffect(() => {
     let live = true;
     getSetting(collegeId, 'admissions_open', 'false').then((v) => { if (live) setAdmissionsOpen(v); }).catch(() => {});
@@ -1099,25 +1114,36 @@ function SettingSwitch({ collegeId, notify, settingKey, title, desc, onLabel, of
 }
 
 /* College info editor — name + tagline live on the `colleges` row,
-   everything else as info_* settings. Blank = fall back to the
-   built-in defaults, so a cleared field never wipes the public site. */
+   everything else as info_* settings. The form shows the EFFECTIVE
+   values — the same ones the public site shows: a stored info_* override
+   where one exists, else the college row / built-in SITE default
+   (row.site already carries the row → SITE fallback, and `whatsapp`
+   falls back to the config number). Saving keeps the overrides-only
+   storage: a value equal to the built-in default is stored as blank,
+   so a cleared field reverts to the default instead of freezing it. */
 function InfoSection({ collegeId, colleges, notify }) {
   const row = (colleges || []).find((c) => c.id === collegeId) || {};
+  const site = row.site || {};
   const [form, setForm] = useState(null); // null = loading
   const [saving, setSaving] = useState(false);
+  const dirtyRef = useRef(false); // admin has edited the form — never clobber it
   useEffect(() => {
+    if (dirtyRef.current) return; // an edit is in progress — leave it alone
     let live = true;
     (async () => {
       const info = await getInfoSettings(collegeId);
       if (!live) return;
-      const v = { name: row.name || '', tagline: row.tagline || '' };
-      for (const f of INFO_FIELDS) v[f.site] = info[f.site] || '';
+      const v = { name: site.name || '', tagline: site.tagline || '' };
+      for (const f of INFO_FIELDS) v[f.site] = info[f.site] || site[f.site] || '';
+      if (!v.whatsapp) v.whatsapp = row.whatsapp || WHATSAPP_NUMBER;
       setForm(v);
     })().catch(() => {});
     return () => { live = false; };
-  }, [collegeId]);
+    /* Re-runs when the live colleges row arrives (after the local
+       fallback), so the editor shows the stored row, not just defaults. */
+  }, [collegeId, row]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!form) return <div className="loading">Loading college info…</div>;
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  const set = (k) => (e) => { dirtyRef.current = true; setForm({ ...form, [k]: e.target.value }); };
   async function save() {
     setSaving(true);
     try {
@@ -1125,9 +1151,18 @@ function InfoSection({ collegeId, colleges, notify }) {
       const tagline = (form.tagline || '').trim();
       if (!name) throw new Error('College name cannot be empty.');
       await adminUpdate('colleges', collegeId, { name, tagline });
+      /* Store only real overrides: a value equal to the built-in default
+         is stored blank, so the site keeps falling back to the default. */
       const values = {};
-      for (const f of INFO_FIELDS) values[f.site] = form[f.site] || '';
+      for (const f of INFO_FIELDS) {
+        const val = (form[f.site] || '').trim();
+        const def = f.site === 'whatsapp'
+          ? (row.whatsapp || WHATSAPP_NUMBER).trim()
+          : (site[f.site] || '').trim();
+        values[f.site] = val === def ? '' : val;
+      }
       await setInfoSettings(collegeId, values);
+      dirtyRef.current = false;
       notify && notify('College info saved. ✅ It shows on the public site on the next page load.');
     } catch (e) {
       notify && notify('Save failed: ' + e.message, 'err');
@@ -1138,9 +1173,10 @@ function InfoSection({ collegeId, colleges, notify }) {
     <div>
       <div className="adm-head"><h2>College Info</h2></div>
       <p className="muted" style={{ marginBottom: 18 }}>
-        Edit the college details shown across the public site. Leave a field
-        blank to keep the built-in value. Changes appear on the public site
-        on the next page load.
+        Edit the college details shown across the public site. Fields show
+        the value live on the site (built-in default where nothing is
+        stored). Clear a field to revert it to the built-in default.
+        Changes appear on the public site on the next page load.
       </p>
       <div className="aform" style={{ maxWidth: 640 }}>
         <Field label="College name" full><input value={form.name} onChange={set('name')} /></Field>
@@ -1304,7 +1340,7 @@ export default function AdminApp() {
         {tab === 'admissions' && <AdmissionsSection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'gallery' && <GallerySection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'messages' && <MessagesSection collegeId={activeCollegeId} notify={notify} onUnread={setUnreadMsg} />}
-        {tab === 'info' && <InfoSection collegeId={activeCollegeId} colleges={colleges} notify={notify} />}
+        {tab === 'info' && <InfoSection key={activeCollegeId} collegeId={activeCollegeId} colleges={colleges} notify={notify} />}
         {tab === 'settings' && <SettingsSection collegeId={activeCollegeId} notify={notify} />}
       </main>
       <Toasts items={toasts} />
