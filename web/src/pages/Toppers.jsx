@@ -3,11 +3,12 @@
    No topper is ever invented: the page shows only published rows, and
    an elegant empty state when there are none yet. The two verified
    toppers are: (1) Munazza Hamid (MDCAT 171, F.Sc 1129, 2026) — from
-   the college's own gallery video "MDCAT Topper Celebration"; (2) a
-   board topper — 3rd Position, Mardan Board, Computer Science — whose
-   NAME was not given and could not be verified from any live source,
-   so that card shows the verified facts with a "name to be announced"
-   note until the college fills it in from the admin panel.
+   the college's own gallery video "MDCAT Topper Celebration"; (2)
+   Arooha Gul — 3rd Position, BISEM Mardan, Computer Science — her
+   name is burned into the college's own "Campus Life" gallery video
+   ("Arooha Gul / Third position in BISEM", frames t≈0–45s) and she
+   introduces herself by name in the audio at t≈0s. Her year is not
+   stated in the video, so the card shows no year rather than a guess.
    Design notes (from real college achiever pages — Crescent Hall of
    Fame, Learners Academy, Stars Academy, St. Mary's): a stats strip
    under the hero, one large featured topper card, toppers grouped by

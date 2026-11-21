@@ -709,12 +709,11 @@ function ResultsSection({ collegeId, notify }) {
 
 /* Toppers manager — the `toppers` table (migration 012). Only real,
    verified toppers belong here: name, marks, position and year exactly
-   as confirmed — never a guess. A topper whose name is not confirmed
-   yet (e.g. the board topper: 3rd Position, Mardan Board, Computer
-   Science) is kept with Name EMPTY; the public page then shows the
-   verified facts with a "name to be announced" note. Leave Year empty
-   when it is not confirmed. First row (lowest Order) is the featured
-   topper on the page. */
+   as confirmed — never a guess. If a name is not confirmed yet, leave
+   <b>Name empty</b> and fill it in later; the public page then shows
+   the verified facts with a "name to be announced" note. Leave Year
+   empty when it is not confirmed (e.g. Arooha Gul's year is not stated
+   in her video). First row (lowest Order) is the featured topper. */
 function ToppersSection({ notify }) {
   const [rows, loading, reload] = useRows(() => fetchToppers());
   return (

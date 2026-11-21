@@ -56,16 +56,20 @@ where not exists (select 1 from toppers where name = 'Munazza Hamid' and year = 
 
 -- Second verified topper, from the college itself (told by the user
 -- 2026-11-21 21:58): 3rd Position, Mardan Board, Computer Science.
--- The NAME was not given and could not be verified from any live
--- source (gallery captions, news_posts and test_results were all
--- checked 2026-11-21 — none mention a board topper), so it is left
--- NULL on purpose: the page shows the verified facts with a
--- "name to be announced" note, and the admin fills the name in once
--- the college confirms it. The year is likewise left NULL.
+-- The NAME is verified from the college's own public gallery video
+-- "Campus Life" (Drive file 1m9xrHNKOCL91BcuHblt_vo_FI_cPoLQb):
+-- the banner burned into the video reads "Arooha Gul / Third
+-- position in BISEM", seen in frames at t≈0s, 15s, 30s and 45s and
+-- confirmed on a 2x enlarged crop of the banner. BISEM = Board of
+-- Intermediate and Secondary Education, Mardan. The year is NOT
+-- stated anywhere in the video, so it is left NULL — never guessed.
+-- Her photo is a still from that same video, stored on R2
+-- (toppers/arooha-gul.jpg).
 insert into toppers
   (name, category, achievement, marks, marks_label, secondary_text, position, year, photo_url, video_url, display_order, published)
 select
-  null, 'Board', '3rd Position — Mardan Board', null, null, 'Computer Science', '3rd Position', null,
-  null, null,
+  'Arooha Gul', 'Board', '3rd Position — BISEM Mardan', null, null, 'Computer Science', '3rd Position', null,
+  'https://pub-657f762b08ff455cb0cff1c7f48b2217.r2.dev/toppers/arooha-gul.jpg',
+  'https://drive.google.com/file/d/1m9xrHNKOCL91BcuHblt_vo_FI_cPoLQb/view',
   2, true
 where not exists (select 1 from toppers where category = 'Board' and position = '3rd Position' and secondary_text = 'Computer Science');
