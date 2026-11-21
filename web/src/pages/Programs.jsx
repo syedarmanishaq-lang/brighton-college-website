@@ -40,7 +40,8 @@ export default function Programs() {
               Visit the college office at Shewa Adda, Kalu Khan — our counsellors will guide
               you based on your matric results and interests.
             </p>
-            <LLink className="btn btn-gold" to="/contact">Visit the College</LLink>
+            <LLink className="btn btn-gold" to="/contact">Visit the College</LLink>{' '}
+            <LLink className="btn btn-outline" to="/admissions" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.5)' }}>{t.pages.admissions.crumbs} →</LLink>
           </div>
         </div>
       </section>

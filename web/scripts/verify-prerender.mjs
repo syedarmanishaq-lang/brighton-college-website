@@ -60,6 +60,12 @@ allOk = check('about en', join(dist, 'brighton/en/about/index.html'), {
   h1: 'About the College',
   canon: 'https://brightoniankpk.com/brighton/en/about',
 }) && allOk;
+allOk = check('install en', join(dist, 'brighton/en/install/index.html'), {
+  title: 'Install the App | The Brighton College',
+  descStart: 'Install The Brighton College app',
+  h1: 'Install the App',
+  canon: 'https://brightoniankpk.com/brighton/en/install',
+}) && allOk;
 allOk = check('past-papers en', join(dist, 'brighton/en/past-papers/index.html'), {
   title: '11th & 12th Past Papers (Solved PDF) | The Brighton College',
   descStart: 'Free solved past papers',

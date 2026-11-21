@@ -99,6 +99,16 @@ export default function Contact() {
             />
           </div>
           <p className="form-note" style={{ marginTop: 8 }}>Map: Kalu Khan, Swabi — KKS Plaza, Main Mardan Swabi Road.</p>
+          {/* Explore more (internal linking): visitors who came to ask a
+              question often want admissions, programs or courses next. */}
+          <nav className="hub-links" aria-label={t.library.exploreMore} style={{ marginTop: 20 }}>
+            <span className="eyebrow">{t.library.exploreMore}</span>
+            <div className="hub-links-row">
+              <LLink className="btn btn-outline" to="/admissions">{t.pages.admissions.crumbs} →</LLink>
+              <LLink className="btn btn-outline" to="/programs">{t.pages.programs.crumbs} →</LLink>
+              <LLink className="btn btn-outline" to="/courses">{t.pages.courses.crumbs} →</LLink>
+            </div>
+          </nav>
         </div>
       </section>
     </>

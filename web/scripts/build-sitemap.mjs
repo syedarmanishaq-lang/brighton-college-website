@@ -21,7 +21,7 @@ const FOLDER_MIME = 'application/vnd.google-apps.folder';
 const STATIC_ROUTES = [
   '', '/about', '/programs', '/faculty', '/admissions', '/news', '/courses',
   '/results', '/material', '/books', '/past-papers', '/mcqs', '/notes',
-  '/gallery', '/contact', '/privacy', '/terms', '/developer',
+  '/gallery', '/contact', '/privacy', '/terms', '/developer', '/install',
 ];
 const STORY_SLUGS = [
   'sports-gala', 'award-ceremonies', 'weekly-tests', 'science-labs',

@@ -146,7 +146,8 @@ function CollegeRoute() {
 /* Known public page slugs — flat legacy URLs (/about) redirect to their
    canonical /:college/:lang/:slug form instead of 404ing. */
 const PAGE_SLUGS = ['about', 'programs', 'admissions', 'news', 'results',
-  'material', 'courses', 'gallery', 'faculty', 'contact', 'privacy', 'terms', 'developer'];
+  'material', 'courses', 'gallery', 'faculty', 'contact', 'privacy', 'terms', 'developer',
+  'books', 'past-papers', 'mcqs', 'notes', 'install'];
 
 /* Single-segment URLs: /en, /brighton, /about (legacy), or an unknown slug. */
 function SingleSegRoute() {

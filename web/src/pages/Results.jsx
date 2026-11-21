@@ -132,6 +132,16 @@ export default function Results() {
                   : <button className="chip" onClick={() => setOpenId(r.id)}>View details ▼</button>}
               </div>
             ))}
+          {/* Explore more (internal linking): results readers usually want
+              study material, courses or textbooks next. */}
+          <nav className="hub-links" aria-label={t.library.exploreMore} style={{ marginTop: 28 }}>
+            <span className="eyebrow">{t.library.exploreMore}</span>
+            <div className="hub-links-row">
+              <LLink className="btn btn-outline" to="/material">{t.pages.material.crumbs} →</LLink>
+              <LLink className="btn btn-outline" to="/courses">{t.pages.courses.crumbs} →</LLink>
+              <LLink className="btn btn-outline" to="/books">{t.pages.books.crumbs} →</LLink>
+            </div>
+          </nav>
         </div>
       </section>
     </>

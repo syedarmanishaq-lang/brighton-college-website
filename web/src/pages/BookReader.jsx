@@ -4,12 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { LLink, useLang } from '../i18n/LangContext.jsx';
 import Seo from '../seo/Seo.jsx';
-import { sba, backendReady } from '../lib/supabase.js';
+import { sba, backendReady, fetchBooks } from '../lib/supabase.js';
 
 export default function BookReader() {
   const { id } = useParams();
   const { t, lang } = useLang();
   const [book, setBook] = useState(null);
+  const [more, setMore] = useState([]);
   const [loading, setLoading] = useState(true);
   /* The Drive viewer itself is slow for big books (~50s for a 49MB PDF
      is Google's limit, not ours) — but the page used to show a blank
@@ -27,6 +28,14 @@ export default function BookReader() {
       .catch(() => setBook(null))
       .finally(() => setLoading(false));
   }, [id]);
+
+  /* Related books (internal linking): same subject, first by board/class. */
+  useEffect(() => {
+    if (!book || !book.subject) return;
+    fetchBooks({ subject: book.subject })
+      .then((list) => setMore((list || []).filter((b) => String(b.id) !== String(id)).slice(0, 3)))
+      .catch(() => {});
+  }, [book, id]);
 
   const embedUrl = book ? `https://drive.google.com/file/d/${book.drive_file_id}/preview` : null;
 
@@ -111,6 +120,20 @@ export default function BookReader() {
                     ? `This book is ${book.file_size_mb} MB — the Drive viewer loads it page by page, so large books open slowly. Tap Download and read it in your phone's own PDF reader instead — it loads much faster and works offline.`
                     : 'Tip: if pages load slowly, tap Download and read the book in your phone’s own PDF reader — it loads much faster and works offline.')}
               </p>
+              {more.length > 0 && (
+              <div style={{ marginTop: 36 }}>
+                <h2 style={{ fontSize: 20, textAlign: 'center' }}>{lang === 'ur' ? 'مزید کتب' : 'More books'}</h2>
+                <div className="grid grid-2" style={{ marginTop: 14 }}>
+                  {more.map((b) => (
+                    <div key={b.id} className="card">
+                      <h3 style={{ marginTop: 0 }}><LLink to={`/read/${b.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{b.title}</LLink></h3>
+                      <p className="muted" style={{ margin: '0 0 12px', fontSize: 14 }}>{b.board} • {b.class_level} • {b.subject}</p>
+                      <LLink className="btn btn-gold" to={`/read/${b.id}`}>{lang === 'ur' ? 'پڑھیں' : 'Read'}</LLink>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              )}
             </div>
           )}
         </div>

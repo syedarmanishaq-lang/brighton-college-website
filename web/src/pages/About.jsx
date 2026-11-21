@@ -164,7 +164,8 @@ export default function About() {
             ))}
           </div>
           <div style={{ marginTop: 28 }}>
-            <LLink className="btn btn-gold" to="/contact">{t.visitCampus}</LLink>
+            <LLink className="btn btn-gold" to="/contact">{t.visitCampus}</LLink>{' '}
+            <LLink className="btn btn-outline" to="/programs">{t.pages.programs.crumbs} →</LLink>
           </div>
         </div>
       </section>

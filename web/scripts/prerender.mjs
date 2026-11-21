@@ -59,7 +59,7 @@ const dist = join(root, 'dist');
 const STATIC_ROUTES = [
   '', '/about', '/programs', '/faculty', '/admissions', '/news', '/courses',
   '/results', '/material', '/books', '/past-papers', '/mcqs', '/notes',
-  '/gallery', '/contact', '/privacy', '/terms', '/developer',
+  '/gallery', '/contact', '/privacy', '/terms', '/developer', '/install',
 ];
 const STORY_SLUGS = [
   'sports-gala', 'award-ceremonies', 'weekly-tests', 'science-labs',
@@ -105,6 +105,7 @@ function h1For(route, lang) {
     privacy: t.footer.privacy, terms: t.footer.terms,
   };
   if (key === 'developer') return 'Meet the Developer';
+  if (key === 'install') return lang === 'ur' ? 'ایپ انسٹال کریں' : 'Install the App';
   if (!(key in map)) throw new Error(`no H1 mapping for route ${route}`);
   return esc(map[key]);
 }
