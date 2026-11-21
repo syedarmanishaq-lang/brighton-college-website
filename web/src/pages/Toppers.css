@@ -1,29 +1,80 @@
 /* Toppers (Hall of Fame) page styles.
    Site language: solid navy + gold, generous spacing, real photos.
    No gradients, no glassmorphism, no purple-blue AI clichés.
-   Animations are CSS-only (reveal on scroll + card hover lift). */
+   Motion is transform + opacity only (no layout thrash): CSS keyframes
+   for the hero entrance, the site's IntersectionObserver reveal
+   pattern with a different motion per section, staggered score-chip
+   pops, photo zoom on hover, and a hand-drawn medal drifting in the
+   hero. Everything switches off under prefers-reduced-motion. */
 
+/* ---------- Hero: layered entrance + crafted medal ---------- */
+.top-hero { position: relative; overflow: hidden; }
+.top-hero .crumbs { animation: top-hero-in .7s cubic-bezier(.22,.9,.3,1) both; }
+.top-hero h1 { animation: top-hero-in .7s cubic-bezier(.22,.9,.3,1) .08s both; }
+.top-hero p { animation: top-hero-in .7s cubic-bezier(.22,.9,.3,1) .18s both; }
 .top-hero .top-gold-rule {
   width: 64px;
   height: 4px;
   background: var(--gold-400);
   border-radius: 2px;
   margin-top: 20px;
+  transform-origin: left center;
+  animation: top-rule-sweep .9s cubic-bezier(.22,.9,.3,1) .34s both;
+}
+@keyframes top-hero-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes top-rule-sweep {
+  from { opacity: 0; transform: scaleX(0); }
+  to { opacity: 1; transform: scaleX(1); }
 }
 
-/* Scroll reveal — mirrors the site's card-in pattern. */
+/* Signature element: a hand-drawn line-art gold medal, floating
+   gently at the hero's right edge (desktop only). */
+.top-hero-medal {
+  position: absolute;
+  right: 48px;
+  top: 50%;
+  width: 112px;
+  color: var(--gold-400);
+  opacity: .55;
+  pointer-events: none;
+  transform: translateY(-50%);
+  animation: top-medal-in .9s ease .45s both, top-medal-bob 7s ease-in-out 1.5s infinite;
+}
+.top-hero-medal svg { display: block; width: 100%; height: auto; }
+@keyframes top-medal-in {
+  from { opacity: 0; transform: translateY(calc(-50% + 16px)); }
+  to { opacity: .55; transform: translateY(-50%); }
+}
+@keyframes top-medal-bob {
+  0%, 100% { transform: translateY(-50%); }
+  50% { transform: translateY(calc(-50% - 8px)); }
+}
+@media (max-width: 900px) { .top-hero-medal { display: none; } }
+
+/* ---------- Scroll reveal — one pattern, several motions ---------- */
 .top-reveal {
   opacity: 0;
   transform: translateY(18px);
-  transition: opacity .6s ease, transform .6s ease;
+  transition: opacity .6s ease, transform .6s cubic-bezier(.22,.9,.3,1);
 }
-.top-reveal.in {
-  opacity: 1;
-  transform: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  .top-reveal { opacity: 1; transform: none; transition: none; }
-  .top-featured, .top-card { transition: none; }
+.top-reveal.rv-left { transform: translateX(-26px); }
+.top-reveal.rv-right { transform: translateX(26px); }
+.top-reveal.rv-zoom { transform: scale(.95); }
+.top-reveal.rv-settle { transform: translateY(26px) scale(.985); transition-duration: .85s; }
+.top-reveal.rv-card { transform: translateY(22px) scale(.98); transition-duration: .7s; }
+.top-reveal.in { opacity: 1; transform: none; }
+
+/* Score chips pop in one by one once their card has arrived. */
+.top-reveal.in .top-score { animation: top-chip-pop .5s cubic-bezier(.22,.9,.3,1) both; }
+.top-reveal.in .top-score:nth-child(1) { animation-delay: .18s; }
+.top-reveal.in .top-score:nth-child(2) { animation-delay: .27s; }
+.top-reveal.in .top-score:nth-child(3) { animation-delay: .36s; }
+@keyframes top-chip-pop {
+  from { opacity: 0; transform: translateY(8px) scale(.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* Stats strip */
@@ -34,9 +85,25 @@
   gap: 16px;
 }
 .top-stat {
+  position: relative;
   text-align: center;
   padding: 26px 16px 22px;
 }
+/* Gold tick draws out from the centre of each stat card as it arrives. */
+.top-stat::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 48px;
+  height: 3px;
+  margin-left: -24px;
+  background: var(--gold-400);
+  border-radius: 2px;
+  transform: scaleX(0);
+  transition: transform .7s cubic-bezier(.22,.9,.3,1) .25s;
+}
+.top-reveal.in .top-stat::before { transform: scaleX(1); }
 .top-stat-num {
   font-size: clamp(34px, 5vw, 46px);
   font-weight: 800;
@@ -49,13 +116,19 @@
   font-size: 14.5px;
 }
 
-/* Filter chips */
+/* Filter chips — smooth active state, gentle press. */
 .top-filters {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 26px;
 }
+.top-filters .chip {
+  transition: background-color .25s ease, color .25s ease, border-color .25s ease,
+    transform .25s ease, box-shadow .25s ease;
+}
+.top-filters .chip:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(10, 28, 51, .10); }
+.top-filters .chip:active { transform: translateY(0) scale(.97); }
 
 /* Featured topper — one large card, photo left, story right. */
 .top-featured {
@@ -65,11 +138,11 @@
   overflow: hidden;
   padding: 0;
   margin-bottom: 40px;
-  transition: transform .25s ease, box-shadow .25s ease;
+  transition: transform .3s ease, box-shadow .3s ease;
 }
 .top-featured:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 14px 34px rgba(10, 28, 51, .14);
+  transform: translateY(-5px);
+  box-shadow: 0 18px 40px rgba(10, 28, 51, .16);
 }
 .top-photo {
   width: 100%;
@@ -79,6 +152,9 @@
   aspect-ratio: 4 / 5;
 }
 .top-photo.big { aspect-ratio: auto; min-height: 100%; }
+.top-card .top-photo, .top-featured .top-photo { transition: transform .6s ease; }
+.top-card:hover .top-photo { transform: scale(1.05); }
+.top-featured:hover .top-photo { transform: scale(1.04); }
 .top-photo-fallback {
   display: flex;
   align-items: center;
@@ -155,11 +231,11 @@
 .top-card {
   overflow: hidden;
   padding: 0;
-  transition: transform .25s ease, box-shadow .25s ease;
+  transition: transform .3s ease, box-shadow .3s ease;
 }
 .top-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 28px rgba(10, 28, 51, .12);
+  transform: translateY(-5px);
+  box-shadow: 0 14px 32px rgba(10, 28, 51, .14);
 }
 .top-card .top-photo { aspect-ratio: 4 / 3; }
 .top-card .top-photo-fallback { font-size: 44px; aspect-ratio: 4 / 3; }
@@ -202,6 +278,18 @@
 }
 .top-cta h2 { color: #fff; font-size: clamp(26px, 3.6vw, 34px); margin: 0 0 10px; }
 .top-cta p { color: #c8d4e6; max-width: 560px; margin: 0 auto 24px; line-height: 1.7; }
+.top-cta .btn { transition: transform .25s ease, box-shadow .25s ease; }
+.top-cta .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0, 0, 0, .28); }
+
+@media (prefers-reduced-motion: reduce) {
+  .top-reveal { opacity: 1; transform: none; transition: none; }
+  .top-featured, .top-card { transition: none; }
+  .top-hero .crumbs, .top-hero h1, .top-hero p, .top-hero .top-gold-rule { animation: none; }
+  .top-hero-medal { display: none; }
+  .top-reveal.in .top-score { animation: none; }
+  .top-stat::before { transform: none; transition: none; }
+  .top-filters .chip, .top-card .top-photo, .top-featured .top-photo, .top-cta .btn { transition: none; }
+}
 
 @media (max-width: 860px) {
   .top-featured { grid-template-columns: 1fr; }

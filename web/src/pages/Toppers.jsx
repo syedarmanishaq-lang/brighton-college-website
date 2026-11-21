@@ -4,27 +4,33 @@
    an elegant empty state when there are none yet. The two verified
    toppers are: (1) Munazza Hamid (MDCAT 171, F.Sc 1129, 2026) — from
    the college's own gallery video "MDCAT Topper Celebration"; (2)
-   Arooha Gul — 3rd Position, BISEM Mardan, Computer Science — her
+   Aroosa Gul — 3rd Position, BISEM Mardan, Computer Science — her
    name is burned into the college's own "Campus Life" gallery video
-   ("Arooha Gul / Third position in BISEM", frames t≈0–45s) and she
-   introduces herself by name in the audio at t≈0s. Her year is not
-   stated in the video, so the card shows no year rather than a guess.
+   and she introduces herself by name in the audio at t≈0s. Her year
+   is not stated in the video, so the card shows no year rather than
+   a guess. (The banner was first misread as "Arooha Gul" — the user
+   corrected it 2026-11-21; the DB row and migration were fixed.)
    Design notes (from real college achiever pages — Crescent Hall of
    Fame, Learners Academy, Stars Academy, St. Mary's): a stats strip
    under the hero, one large featured topper card, toppers grouped by
    year, category filter (MDCAT / Board), and a "Be the Next Topper"
-   call to action. Animations are CSS-only reveal + count-up; no
-   animation library, so the page stays fast. */
+   call to action. Motion: layered hero entrance, varied scroll
+   reveals, staggered score-chip pops, photo zoom on hover, and a
+   hand-drawn gold medal drifting in the hero — all transform +
+   opacity only, CSS-only, no animation library, so the page stays
+   fast on a phone. */
 import React, { useEffect, useRef, useState } from 'react';
 import { LLink, useLang } from '../i18n/LangContext.jsx';
 import Seo from '../seo/Seo.jsx';
 import { fetchToppers } from '../lib/supabase.js';
 import './Toppers.css';
 
-/* Fade-up on scroll. Mirrors the Gallery/Home IntersectionObserver
+/* Scroll reveal. Mirrors the Gallery/Home IntersectionObserver
    pattern; falls back to visible when IO is unavailable, and honours
-   prefers-reduced-motion via CSS. */
-function Reveal({ children, delay }) {
+   prefers-reduced-motion via CSS. The `variant` gives each section
+   its own motion (left / right / zoom / settle / card) so the page
+   never feels like one identical fade-up repeated. */
+function Reveal({ children, delay, variant }) {
   const ref = useRef(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
@@ -38,7 +44,7 @@ function Reveal({ children, delay }) {
     return () => io.disconnect();
   }, []);
   return (
-    <div ref={ref} className={'top-reveal' + (inView ? ' in' : '')}
+    <div ref={ref} className={'top-reveal' + (variant ? ` rv-${variant}` : '') + (inView ? ' in' : '')}
       style={delay ? { transitionDelay: `${delay}ms` } : undefined}>
       {children}
     </div>
@@ -179,10 +185,10 @@ export default function Toppers() {
 
   const renderGroup = (key, heading, list) => (
     <div key={key}>
-      <Reveal><h2 className="top-year">{heading}</h2></Reveal>
+      <Reveal variant="left"><h2 className="top-year">{heading}</h2></Reveal>
       <div className="top-grid">
         {list.map((r, i) => (
-          <Reveal key={r.id} delay={(i % 3) * 120}>
+          <Reveal key={r.id} delay={(i % 3) * 120} variant="card">
             <article className="card top-card">
               <TopperPhoto t={r} />
               <div className="top-card-body">
@@ -207,6 +213,17 @@ export default function Toppers() {
     <>
       <Seo page="toppers" />
       <section className="page-hero top-hero">
+        {/* Hand-drawn line-art gold medal — the page's signature
+            motion element. Decorative only; hidden on small screens. */}
+        <div className="top-hero-medal" aria-hidden="true">
+          <svg viewBox="0 0 120 140" aria-hidden="true">
+            <path d="M40 2 L60 46 L80 2" fill="none" stroke="currentColor" strokeWidth="10" strokeLinejoin="round" strokeLinecap="round" />
+            <circle cx="60" cy="46" r="7" fill="#0a1c33" stroke="currentColor" strokeWidth="3" />
+            <circle cx="60" cy="86" r="34" fill="none" stroke="currentColor" strokeWidth="3" />
+            <circle cx="60" cy="86" r="26" fill="none" stroke="currentColor" strokeWidth="1.5" opacity=".55" />
+            <path d="M60 70 L63.8 80.7 L75.2 81.1 L66.2 88 L69.4 98.9 L60 92.5 L50.6 98.9 L53.8 88 L44.8 81.1 L56.2 80.7 Z" fill="currentColor" />
+          </svg>
+        </div>
         <div className="container">
           <div className="crumbs"><LLink to="/">Home</LLink> / {s.crumbs}</div>
           <h1>{s.title}</h1>
@@ -240,7 +257,7 @@ export default function Toppers() {
               <div className="container">
                 <div className="top-stats">
                   {stats.map((st, i) => (
-                    <Reveal key={st.label} delay={i * 120}>
+                    <Reveal key={st.label} delay={i * 120} variant="zoom">
                       <div className="card top-stat">
                         <div className="top-stat-num"><CountUp to={st.v} /></div>
                         <div className="top-stat-label">{st.label}</div>
@@ -265,7 +282,7 @@ export default function Toppers() {
               </div>
 
               {filter === 'all' && featured && (
-                <Reveal>
+                <Reveal variant="settle">
                   <article className="card top-featured">
                     <TopperPhoto t={featured} big />
                     <div className="top-featured-body">
@@ -295,15 +312,20 @@ export default function Toppers() {
                 </Reveal>
               )}
 
-              {years.map((y) => renderGroup(y, filter === 'all' ? y : `${filter} — ${y}`,
-                datedRows.filter((r) => r.year === y)))}
-              {undatedRows.length > 0 && renderGroup('undated', undatedHeading, undatedRows)}
+              {/* key={filter} re-mounts the groups on every filter tap,
+                  so the grid re-enters with its stagger instead of
+                  swapping in flat. */}
+              <div key={filter}>
+                {years.map((y) => renderGroup(y, filter === 'all' ? y : `${filter} — ${y}`,
+                  datedRows.filter((r) => r.year === y)))}
+                {undatedRows.length > 0 && renderGroup('undated', undatedHeading, undatedRows)}
+              </div>
             </div>
           </section>
 
           <section className="top-cta">
             <div className="container">
-              <Reveal>
+              <Reveal variant="zoom">
                 <h2>{s.ctaTitle}</h2>
                 <p>{s.ctaText}</p>
                 <LLink className="btn btn-gold" to="/admissions">{s.ctaBtn}</LLink>
