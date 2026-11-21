@@ -405,7 +405,7 @@ export default function CourseView() {
                   <h2 style={{ marginBottom: 14 }}>Instructor</h2>
                   {course.instructor_name ? (
                     <div className="instructor-card">
-                      {course.instructor_photo && <img src={course.instructor_photo} alt={course.instructor_name} />}
+                      {course.instructor_photo && <img src={course.instructor_photo} alt={course.instructor_name} loading="lazy" decoding="async" />}
                       <div>
                         <h3 style={{ margin: '0 0 4px' }}>{course.instructor_name}</h3>
                         {course.instructor_bio && <p style={{ margin: 0, color: 'var(--muted)', fontSize: 14.5 }}>{course.instructor_bio}</p>}
@@ -432,7 +432,7 @@ export default function CourseView() {
                           <div className="card" key={rc.id} style={{ padding: 0, overflow: 'hidden' }}>
                             <LLink to={`/courses/${rc.id}`} style={{ display: 'block', aspectRatio: '16/9' }}>
                               {rc.thumbnail_url
-                                ? <img src={rc.thumbnail_url} alt={rc.title}
+                                ? <img src={rc.thumbnail_url} alt={rc.title} loading="lazy" decoding="async"
                                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                     onError={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = courseThumbFor(rc.title); } }} />
                                 : <div className="thumb-fallback">

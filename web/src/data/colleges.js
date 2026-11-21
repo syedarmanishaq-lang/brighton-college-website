@@ -8,10 +8,16 @@ import { SITE, WHATSAPP_NUMBER } from '../config.js';
 
 export const DEFAULT_COLLEGE_SLUG = 'brighton';
 
-/* Local shape mirrors the DB row + a `site` block shaped like SITE. */
+/* Local shape mirrors the DB row + a `site` block shaped like SITE.
+   The id below is the REAL Supabase UUID for Brighton (stable — row ids
+   never change). Baking it in means the public site's scoped queries
+   (news, courses, settings, info) can fire immediately on first paint
+   instead of waiting ~1s for the background colleges fetch; that fetch
+   still runs and swaps in the live row when it arrives, so if the UUID
+   ever changed the site would simply fall back to the old behaviour. */
 export const COLLEGES = {
   brighton: {
-    id: 'local-brighton', // replaced by the real uuid once the backend is live
+    id: '96e45411-8fba-42f7-b106-ed5fcc293d3b',
     slug: 'brighton',
     logo_url: '',
     primary_color: '#0A1B33',

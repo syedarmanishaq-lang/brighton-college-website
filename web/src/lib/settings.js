@@ -28,6 +28,42 @@ const inflight = new Map(); /* `${collegeId}:${key}` -> Promise<string> */
 const freshCache = new Map(); /* `${collegeId}:${key}` -> { at, value } */
 const SETTING_TTL_MS = 60 * 1000;
 
+/* The three switch keys every public page reads (admissions banner,
+   ad slots, rewarded pre-roll). They used to cost 3 separate Supabase
+   requests per page load; one bulk query returns all three at once.
+   Shared single-flight + 60s cache, same as single-key reads. */
+const SWITCH_KEYS = ['admissions_open', 'show_ads', 'rewarded_ads'];
+const bulkInflight = new Map(); /* collegeId -> Promise<object|null> */
+const bulkFresh = new Map(); /* collegeId -> { at, values } */
+
+async function getSettingsBulk(collegeId) {
+  const fresh = bulkFresh.get(collegeId);
+  if (fresh && Date.now() - fresh.at < SETTING_TTL_MS) return fresh.values;
+  const pending = bulkInflight.get(collegeId);
+  if (pending) return pending;
+  const p = (async () => {
+    try {
+      const keys = SWITCH_KEYS.map(encodeURIComponent).join(',');
+      const q = '/rest/v1/site_settings?select=key,value'
+        + '&college_id=eq.' + encodeURIComponent(collegeId)
+        + '&key=in.(' + keys + ')';
+      const rows = await sba.get(q);
+      const values = {};
+      for (const r of rows || []) {
+        if (r && r.key !== undefined && r.value !== undefined && r.value !== null) {
+          values[r.key] = String(r.value);
+        }
+      }
+      for (const k of Object.keys(values)) saveLocalSetting(k, values[k]);
+      bulkFresh.set(collegeId, { at: Date.now(), values });
+      return values;
+    } catch { return null; }
+  })();
+  bulkInflight.set(collegeId, p);
+  p.finally(() => { if (bulkInflight.get(collegeId) === p) bulkInflight.delete(collegeId); });
+  return p;
+}
+
 export function localSetting(key, def) {
   try {
     const v = localStorage.getItem(LS_PREFIX + key);
@@ -42,12 +78,22 @@ export function saveLocalSetting(key, value) {
 /* Read one setting from Supabase; falls back to the local value (or def)
    when the backend is offline or the row is missing. Identical concurrent
    reads share one request (see inflight cache above); a placeholder
-   college id never hits the network at all. */
+   college id never hits the network at all. The three public switch keys
+   (admissions_open / show_ads / rewarded_ads) are read through ONE bulk
+   request — see getSettingsBulk — so a page load fires 1 settings query
+   instead of 3. */
 export async function getSetting(collegeId, key, def) {
   if (!backendReady() || !isRealCollegeId(collegeId)) return localSetting(key, def);
   const ck = collegeId + ':' + key;
   const fresh = freshCache.get(ck);
   if (fresh && Date.now() - fresh.at < SETTING_TTL_MS) return fresh.value;
+  if (SWITCH_KEYS.includes(key)) {
+    const bulk = await getSettingsBulk(collegeId);
+    if (bulk && bulk[key] !== undefined) {
+      freshCache.set(ck, { at: Date.now(), value: bulk[key] });
+      return bulk[key];
+    }
+  }
   const pending = inflight.get(ck);
   if (pending) return pending;
   const p = (async () => {

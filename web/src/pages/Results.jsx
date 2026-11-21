@@ -20,13 +20,13 @@ const RESULTS_TTL_MS = 5 * 60 * 1000;
    as JSON in result_data. */
 function ResultBody({ r }) {
   if (r.image_url) {
-    return <img src={r.image_url} alt={r.title}
+    return <img src={r.image_url} alt={r.title} loading="lazy" decoding="async"
       style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--line)', marginTop: 12 }} />;
   }
   if (r.drive_file_id) {
     const url = drivePreviewUrl(r.drive_file_id);
     if (r.file_type === 'image') {
-      return <img src={url.replace('/preview', '/view?usp=drivesdk')} alt={r.title}
+      return <img src={url.replace('/preview', '/view?usp=drivesdk')} alt={r.title} loading="lazy" decoding="async"
         style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--line)' }} />;
     }
     return (

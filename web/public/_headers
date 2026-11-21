@@ -1,10 +1,16 @@
 # Cloudflare Pages edge-cache headers.
-# HTML is dynamic (SPA shell + fresh content): no browser cache, but a
-# SHORT 60s shared edge cache so concurrent spikes share one origin
-# fetch. Freshness is preserved: the service worker is network-first
-# for navigations, and 60s is far below any content TTL.
+# Prerendered pages under /brighton/ are STATIC per build (dynamic data
+# loads client-side via JS), so a 5-minute shared edge cache +
+# stale-while-revalidate lets traffic spikes share one origin fetch
+# instead of hitting Pages for every visitor. A deploy ships new hashed
+# assets, so the worst case is a visitor seeing the previous build's
+# page for up to 5 minutes — no breakage, no stale data (live content
+# always comes from Supabase/Drive in the browser).
+# Admin (/adminsecuresex/) and the SPA shell stay on the short 60s rule.
 # (Note: _headers rules merge with Pages' defaults, so a separate
 # /assets/* long-cache rule did not take effect as written — hashed
 # assets keep Pages' default max-age=14400, which is fine.)
+/brighton/*
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400, must-revalidate
 /*
   Cache-Control: public, max-age=0, s-maxage=60, must-revalidate
