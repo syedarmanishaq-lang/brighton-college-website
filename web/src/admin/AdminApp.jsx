@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   sba, backendReady,
   fetchNews, fetchCourses, fetchResults, fetchMaterial, fetchBooks, fetchGallery, fetchGalleryPhotos, fetchGalleryImages,
+  fetchToppers,
   fetchApplications, markReviewed, adminCreate, adminUpdate, adminDelete,
   adminDeleteWithStorage, uploadImage, MAX_UPLOAD_MB, fetchColleges,
   fetchStorageUsage, STORAGE_QUOTA_BYTES,
@@ -706,6 +707,44 @@ function ResultsSection({ collegeId, notify }) {
   );
 }
 
+/* Toppers manager — the `toppers` table (migration 012). Only real,
+   verified toppers belong here: name, marks, position and year exactly
+   as confirmed — never a guess. A topper whose name is not confirmed
+   yet (e.g. the board topper: 3rd Position, Mardan Board, Computer
+   Science) is kept with Name EMPTY; the public page then shows the
+   verified facts with a "name to be announced" note. Leave Year empty
+   when it is not confirmed. First row (lowest Order) is the featured
+   topper on the page. */
+function ToppersSection({ notify }) {
+  const [rows, loading, reload] = useRows(() => fetchToppers());
+  return (
+    <>
+      <div className="alert ok" style={{ marginBottom: 16 }}>
+        💡 Add only <b>verified</b> toppers — real name, real marks, real position, real year.
+        If a name is not confirmed yet, leave <b>Name empty</b> and fill it in later;
+        the page shows the verified facts with a "name to be announced" note.
+        <b>Order 1</b> is the featured topper on the page.
+      </div>
+      <Crud title="Toppers" table="toppers" rows={rows} loading={loading} reload={reload}
+        fileField="photo_url" notify={notify}
+        columns={[
+          { key: 'name', label: 'Name', full: true },
+          { key: 'category', label: 'Category', type: 'select', opts: ['MDCAT', 'Board'], def: 'MDCAT' },
+          { key: 'achievement', label: 'Achievement', full: true, def: '' },
+          { key: 'marks', label: 'Marks (e.g. 171)' },
+          { key: 'marks_label', label: 'Marks label (e.g. MDCAT)' },
+          { key: 'secondary_text', label: 'Second line (e.g. F.Sc 1129 / Computer Science)' },
+          { key: 'position', label: 'Position (e.g. 3rd Position)' },
+          { key: 'year', label: 'Year', type: 'number' },
+          { key: 'photo_url', label: 'Photo (upload)', type: 'imageupload', bucket: 'toppers', full: true, hide: true },
+          { key: 'video_url', label: 'Celebration video link (Drive)', full: true, hide: true },
+          { key: 'display_order', label: 'Order', type: 'number', def: 0 },
+          { key: 'published', label: 'Published (live)', type: 'check', def: true },
+        ]} />
+    </>
+  );
+}
+
 /* Books & past papers manager — the `books` table (textbooks + past
    papers, all boards) is global, not college-scoped. Type is derived
    from the title, same as the public Books/Past Papers pages: titles
@@ -1219,6 +1258,7 @@ const TABS = [
   ['news', '📰 News'],
   ['courses', '🎬 Courses'],
   ['results', '📊 Results'],
+  ['toppers', '🏆 Toppers'],
   ['material', '📚 Material'],
   ['books', '📖 Books'],
   ['admissions', '📝 Admissions'],
@@ -1335,6 +1375,7 @@ export default function AdminApp() {
         {tab === 'news' && <NewsSection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'courses' && <CoursesSection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'results' && <ResultsSection collegeId={activeCollegeId} notify={notify} />}
+        {tab === 'toppers' && <ToppersSection notify={notify} />}
         {tab === 'material' && <MaterialSection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'books' && <BooksSection notify={notify} />}
         {tab === 'admissions' && <AdmissionsSection collegeId={activeCollegeId} notify={notify} />}

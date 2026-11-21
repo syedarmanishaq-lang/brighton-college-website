@@ -57,7 +57,7 @@ const dist = join(root, 'dist');
 
 // Must match scripts/build-sitemap.mjs + src/App.jsx public routes.
 const STATIC_ROUTES = [
-  '', '/about', '/programs', '/faculty', '/admissions', '/news', '/courses',
+  '', '/about', '/programs', '/faculty', '/toppers', '/admissions', '/news', '/courses',
   '/results', '/material', '/books', '/past-papers', '/mcqs', '/notes',
   '/gallery', '/contact', '/privacy', '/terms', '/developer', '/install',
 ];
@@ -102,6 +102,7 @@ function h1For(route, lang) {
     books: t.pages.books.title, 'past-papers': t.pages.pastPapers.title,
     mcqs: t.pages.mcqs.title, notes: t.pages.notes.title,
     gallery: t.pages.gallery.title, contact: t.pages.contact.title,
+    toppers: t.pages.toppers.title,
     privacy: t.footer.privacy, terms: t.footer.terms,
   };
   if (key === 'developer') return 'Meet the Developer';

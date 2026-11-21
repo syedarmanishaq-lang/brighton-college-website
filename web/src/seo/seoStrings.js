@@ -163,6 +163,16 @@ export const SEO_PAGES = {
       desc: 'Meet Arman Ishaq, the developer of The Brighton College website — full website development, Android apps, software, frontend, backend and SEO for clients in the UK, USA and Canada.',
     },
   },
+  toppers: {
+    en: {
+      title: 'Our Toppers — MDCAT & Board Achievers | The Brighton College',
+      desc: 'Meet the toppers of The Brighton College, Swabi — MDCAT qualifiers and board position holders, with marks, photos and celebration videos.',
+    },
+    ur: {
+      title: 'Our Toppers — MDCAT & Board Achievers | The Brighton College',
+      desc: 'Meet the toppers of The Brighton College, Swabi — MDCAT qualifiers and board position holders, with marks, photos and celebration videos.',
+    },
+  },
   install: {
     en: {
       title: 'Install the App | The Brighton College',

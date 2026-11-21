@@ -34,6 +34,14 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://brightoniankpk.com/brighton/en/toppers</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://brightoniankpk.com/brighton/en/toppers"/>
+    <xhtml:link rel="alternate" hreflang="ur" href="https://brightoniankpk.com/brighton/ur/toppers"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://brightoniankpk.com/brighton/en/toppers"/>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://brightoniankpk.com/brighton/en/admissions</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://brightoniankpk.com/brighton/en/admissions"/>
     <xhtml:link rel="alternate" hreflang="ur" href="https://brightoniankpk.com/brighton/ur/admissions"/>

@@ -28,6 +28,7 @@ const CourseView = lazy(() => import('./pages/CourseView.jsx'));
 const Gallery = lazy(() => import('./pages/Gallery.jsx'));
 const StoryPage = lazy(() => import('./pages/StoryPage.jsx'));
 const Faculty = lazy(() => import('./pages/Faculty.jsx'));
+const Toppers = lazy(() => import('./pages/Toppers.jsx'));
 const Contact = lazy(() => import('./pages/Contact.jsx'));
 const Install = lazy(() => import('./pages/Install.jsx'));
 const Privacy = lazy(() => import('./pages/Privacy.jsx'));
@@ -86,6 +87,7 @@ function SiteChrome() {
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/gallery/:storySlug" element={<StoryPage />} />
           <Route path="/faculty" element={<Faculty />} />
+          <Route path="/toppers" element={<Toppers />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/install" element={<Install />} />
           <Route path="/privacy" element={<Privacy />} />
@@ -146,7 +148,7 @@ function CollegeRoute() {
 /* Known public page slugs — flat legacy URLs (/about) redirect to their
    canonical /:college/:lang/:slug form instead of 404ing. */
 const PAGE_SLUGS = ['about', 'programs', 'admissions', 'news', 'results',
-  'material', 'courses', 'gallery', 'faculty', 'contact', 'privacy', 'terms', 'developer',
+  'material', 'courses', 'gallery', 'faculty', 'toppers', 'contact', 'privacy', 'terms', 'developer',
   'books', 'past-papers', 'mcqs', 'notes', 'install'];
 
 /* Single-segment URLs: /en, /brighton, /about (legacy), or an unknown slug. */

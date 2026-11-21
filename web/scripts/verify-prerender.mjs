@@ -72,6 +72,12 @@ allOk = check('past-papers en', join(dist, 'brighton/en/past-papers/index.html')
   h1: 'Past Papers',
   canon: 'https://brightoniankpk.com/brighton/en/past-papers',
 }) && allOk;
+allOk = check('toppers en', join(dist, 'brighton/en/toppers/index.html'), {
+  title: 'Our Toppers — MDCAT & Board Achievers | The Brighton College',
+  descStart: 'Meet the toppers of The Brighton College',
+  h1: 'Our Toppers',
+  canon: 'https://brightoniankpk.com/brighton/en/toppers',
+}) && allOk;
 allOk = check('story en', join(dist, 'brighton/en/gallery/sports-gala/index.html'), {
   title: 'Sports Gala: Four Houses, One Spirit | The Brighton College',
   descStart: 'Every year the whole college divides into four houses',

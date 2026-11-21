@@ -1,0 +1,215 @@
+/* Toppers (Hall of Fame) page styles.
+   Site language: solid navy + gold, generous spacing, real photos.
+   No gradients, no glassmorphism, no purple-blue AI clichés.
+   Animations are CSS-only (reveal on scroll + card hover lift). */
+
+.top-hero .top-gold-rule {
+  width: 64px;
+  height: 4px;
+  background: var(--gold-400);
+  border-radius: 2px;
+  margin-top: 20px;
+}
+
+/* Scroll reveal — mirrors the site's card-in pattern. */
+.top-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity .6s ease, transform .6s ease;
+}
+.top-reveal.in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .top-reveal { opacity: 1; transform: none; transition: none; }
+  .top-featured, .top-card { transition: none; }
+}
+
+/* Stats strip */
+.top-stats-sec { padding-bottom: 0; }
+.top-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.top-stat {
+  text-align: center;
+  padding: 26px 16px 22px;
+}
+.top-stat-num {
+  font-size: clamp(34px, 5vw, 46px);
+  font-weight: 800;
+  color: var(--gold-500);
+  line-height: 1.1;
+}
+.top-stat-label {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 14.5px;
+}
+
+/* Filter chips */
+.top-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+
+/* Featured topper — one large card, photo left, story right. */
+.top-featured {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  margin-bottom: 40px;
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.top-featured:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 34px rgba(10, 28, 51, .14);
+}
+.top-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  aspect-ratio: 4 / 5;
+}
+.top-photo.big { aspect-ratio: auto; min-height: 100%; }
+.top-photo-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--navy-900);
+  color: var(--gold-400);
+  font-size: 64px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+.top-featured-body { padding: 34px 36px; }
+.top-badge {
+  display: inline-block;
+  background: var(--gold-100);
+  color: var(--gold-deep);
+  border: 1px solid var(--gold-400);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+.top-badge.small { font-size: 11.5px; padding: 4px 10px; }
+.top-featured-body h2 {
+  font-size: clamp(26px, 3.4vw, 34px);
+  margin: 16px 0 6px;
+}
+.top-achieve {
+  color: var(--muted);
+  font-size: 17px;
+  margin: 0 0 22px;
+}
+.top-scores {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.top-score {
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 18px;
+  min-width: 110px;
+}
+.top-score b {
+  display: block;
+  font-size: 24px;
+  color: var(--navy-900);
+  line-height: 1.15;
+}
+.top-score span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.top-score.gold { background: var(--gold-100); border-color: var(--gold-400); }
+.top-score.gold b { color: var(--gold-deep); }
+
+/* Year sections + compact cards */
+.top-year {
+  font-size: 23px;
+  margin: 8px 0 18px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--gold-400);
+  display: inline-block;
+}
+.top-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 40px;
+}
+.top-card {
+  overflow: hidden;
+  padding: 0;
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.top-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(10, 28, 51, .12);
+}
+.top-card .top-photo { aspect-ratio: 4 / 3; }
+.top-card .top-photo-fallback { font-size: 44px; aspect-ratio: 4 / 3; }
+.top-card-body { padding: 18px 20px 20px; }
+.top-card-body h3 { font-size: 19px; margin: 12px 0 10px; }
+.top-card-body .top-scores { margin-bottom: 14px; }
+.top-card-body .top-score { padding: 8px 12px; min-width: 0; }
+.top-card-body .top-score b { font-size: 19px; }
+.top-video-link {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--link);
+}
+
+/* Note under a topper whose name is not confirmed yet. */
+.top-name-soon {
+  color: var(--muted);
+  font-size: 14px;
+  font-style: italic;
+  margin: 6px 0 0;
+}
+
+/* Empty states */
+.top-empty {
+  text-align: center;
+  padding: 48px 28px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.top-empty-mark { font-size: 44px; margin-bottom: 8px; }
+.top-empty h2 { margin: 8px 0; }
+.top-empty p { color: var(--muted); line-height: 1.7; margin: 0 auto 22px; max-width: 480px; }
+
+/* Closing call to action */
+.top-cta {
+  background: var(--navy-950);
+  color: #fff;
+  text-align: center;
+  padding: 56px 0 60px;
+}
+.top-cta h2 { color: #fff; font-size: clamp(26px, 3.6vw, 34px); margin: 0 0 10px; }
+.top-cta p { color: #c8d4e6; max-width: 560px; margin: 0 auto 24px; line-height: 1.7; }
+
+@media (max-width: 860px) {
+  .top-featured { grid-template-columns: 1fr; }
+  .top-photo.big { aspect-ratio: 4 / 3; }
+  .top-featured-body { padding: 24px 22px; }
+  .top-grid { grid-template-columns: repeat(2, 1fr); }
+  .top-stats { grid-template-columns: 1fr; gap: 12px; }
+}
+@media (max-width: 560px) {
+  .top-grid { grid-template-columns: 1fr; }
+}

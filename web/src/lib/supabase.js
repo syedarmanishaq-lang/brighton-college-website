@@ -114,6 +114,15 @@ export const fetchCourseById = (id, collegeId) =>
     .then((r) => r && r[0])
     .catch(() => null); /* Drive folder IDs aren't UUIDs — return null so the Drive fallback runs */
 
+/* ---------- Toppers (Hall of Fame) ---------- */
+/* Public reads show only published toppers. Rows carry college_id null
+   (like gallery_media), so the read stays unscoped — scoping it would
+   hide every row. Until migration 012 is run the table does not exist
+   and the request 404s — the Toppers page treats that as "no toppers
+   yet" instead of an error. */
+export const fetchToppers = () =>
+  sba.get('/rest/v1/toppers?select=*&published=eq.true&order=display_order.asc,created_at.desc');
+
 /* ---------- Gallery ---------- */
 export const fetchGallery = (collegeId) =>
   sba.get('/rest/v1/gallery_media?select=*&order=display_order.asc');
