@@ -58,9 +58,10 @@ where not exists (select 1 from toppers where name = 'Munazza Hamid' and year = 
 -- 2026-11-21 21:58): 3rd Position, Mardan Board, Computer Science.
 -- The NAME is verified from the college's own public gallery video
 -- "Campus Life" (Drive file 1m9xrHNKOCL91BcuHblt_vo_FI_cPoLQb):
--- the banner burned into the video reads "Arooha Gul / Third
--- position in BISEM", seen in frames at t≈0s, 15s, 30s and 45s and
--- confirmed on a 2x enlarged crop of the banner. BISEM = Board of
+-- the banner burned into the video was first read as "Arooha Gul" but
+-- the user corrected it 2026-11-21 22:18: the real name is "Aroosa Gul".
+-- (The R2 photo file still carries the old spelling arooha-gul.jpg;
+-- the file name is not visible to visitors, so it was left as-is.)
 -- Intermediate and Secondary Education, Mardan. The year is NOT
 -- stated anywhere in the video, so it is left NULL — never guessed.
 -- Her photo is a still from that same video, stored on R2
@@ -68,7 +69,7 @@ where not exists (select 1 from toppers where name = 'Munazza Hamid' and year = 
 insert into toppers
   (name, category, achievement, marks, marks_label, secondary_text, position, year, photo_url, video_url, display_order, published)
 select
-  'Arooha Gul', 'Board', '3rd Position — BISEM Mardan', null, null, 'Computer Science', '3rd Position', null,
+  'Aroosa Gul', 'Board', '3rd Position — BISEM Mardan', null, null, 'Computer Science', '3rd Position', null,
   'https://pub-657f762b08ff455cb0cff1c7f48b2217.r2.dev/toppers/arooha-gul.jpg',
   'https://drive.google.com/file/d/1m9xrHNKOCL91BcuHblt_vo_FI_cPoLQb/view',
   2, true
