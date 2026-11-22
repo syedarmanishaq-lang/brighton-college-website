@@ -23,6 +23,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { LLink, useLang } from '../i18n/LangContext.jsx';
 import Seo from '../seo/Seo.jsx';
 import { fetchToppers } from '../lib/supabase.js';
+import { driveDownloadUrl } from '../lib/drive.js';
 import './Toppers.css';
 
 /* Scroll reveal. Mirrors the Gallery/Home IntersectionObserver
@@ -103,6 +104,73 @@ function TopperPhoto({ t, big }) {
     <div className={'top-photo top-photo-fallback' + (big ? ' big' : '')} aria-hidden>
       {initials(t.name)}
     </div>
+  );
+}
+
+/* Fallback stream URL if the Drive API stream ever fails (e.g. key
+   revoked) — same as Gallery.jsx. */
+const DRIVE_UC = (id) => `https://drive.google.com/uc?export=download&id=${id}`;
+
+/* The toppers table stores the Drive /view link; the player needs the
+   bare file id for the alt=media stream URL. */
+function driveFileId(url) {
+  const m = String(url || '').match(/\/d\/([A-Za-z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+/* In-place Drive video player — the Gallery lightbox pattern, shrunk
+   into the card. The <video> mounts only after the user taps the
+   poster, so nothing streams on page load (no data burn on a slow
+   connection); the tap itself starts playback, exactly like the
+   Gallery lightbox. Primary stream is the Drive API alt=media URL
+   (range requests, verified 206 video/mp4); on error it falls back
+   once to the uc?export=download URL, then to a Drive link. */
+function TopperPlayer({ t, big, fileId }) {
+  const [src, setSrc] = useState(() => driveDownloadUrl(fileId));
+  const [failed, setFailed] = useState(false);
+  const [fellBack, setFellBack] = useState(false);
+  if (failed) {
+    return (
+      <div className={'top-video top-video-failed' + (big ? ' big' : '')}>
+        <p>This video could not be played.</p>
+        <a href={t.video_url} target="_blank" rel="noreferrer">Watch on Google Drive</a>
+      </div>
+    );
+  }
+  return (
+    <div className={'top-video' + (big ? ' big' : '')}>
+      <video
+        src={src}
+        poster={t.photo_url || undefined}
+        controls
+        playsInline
+        preload="none"
+        autoPlay
+        onError={() => {
+          if (!fellBack) { setFellBack(true); setSrc(DRIVE_UC(fileId)); }
+          else setFailed(true);
+        }}
+        title={t.name}
+      />
+    </div>
+  );
+}
+
+/* Card media: the R2 still stays as the poster with a gold play badge;
+   tapping it swaps the still for the topper's own Drive video, played
+   in place. No video_url (or an unparseable one) → the plain photo. */
+function TopperMedia({ t, big }) {
+  const [playing, setPlaying] = useState(false);
+  const fileId = driveFileId(t.video_url);
+  if (!fileId) return <TopperPhoto t={t} big={big} />;
+  if (playing) return <TopperPlayer t={t} big={big} fileId={fileId} />;
+  return (
+    <button type="button" className={'top-video-poster' + (big ? ' big' : '')}
+      onClick={() => setPlaying(true)}
+      aria-label={`Play video: ${t.name || t.achievement || 'topper'}`}>
+      <TopperPhoto t={t} big={big} />
+      <span className="top-play-badge" aria-hidden="true">▶</span>
+    </button>
   );
 }
 
@@ -190,17 +258,12 @@ export default function Toppers() {
         {list.map((r, i) => (
           <Reveal key={r.id} delay={(i % 3) * 120} variant="card">
             <article className="card top-card">
-              <TopperPhoto t={r} />
+              <TopperMedia t={r} />
               <div className="top-card-body">
                 <span className="top-badge small">{r.achievement || r.category}</span>
                 <h3>{displayName(r)}</h3>
                 {!r.name && <p className="top-name-soon">{s.nameSoon}</p>}
                 <ScoreChips t={r} />
-                {r.video_url && (
-                  <a className="top-video-link" href={r.video_url} target="_blank" rel="noreferrer">
-                    ▶ {s.watchVideo}
-                  </a>
-                )}
               </div>
             </article>
           </Reveal>
@@ -284,18 +347,13 @@ export default function Toppers() {
               {filter === 'all' && featured && (
                 <Reveal variant="settle">
                   <article className="card top-featured">
-                    <TopperPhoto t={featured} big />
+                    <TopperMedia t={featured} big />
                     <div className="top-featured-body">
                       <span className="top-badge">{s.featured} · {featured.achievement || featured.category}</span>
                       <h2>{displayName(featured)}</h2>
                       {!featured.name && <p className="top-name-soon">{s.nameSoon}</p>}
                       <p className="top-achieve">{featured.achievement}</p>
                       <ScoreChips t={featured} />
-                      {featured.video_url && (
-                        <a className="btn btn-outline" href={featured.video_url} target="_blank" rel="noreferrer">
-                          ▶ {s.watchVideo}
-                        </a>
-                      )}
                     </div>
                   </article>
                 </Reveal>

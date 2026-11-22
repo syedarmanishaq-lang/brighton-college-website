@@ -250,6 +250,79 @@
   color: var(--link);
 }
 
+/* ---------- In-place video player ----------
+   The R2 still stays as the poster; tapping it swaps the still for
+   the topper's own Drive video, played in place (Gallery lightbox
+   pattern). Nothing streams until the tap — the <video> mounts
+   only then. */
+.top-video-poster {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+  font: inherit;
+}
+.top-video-poster.big { height: 100%; }
+.top-video-poster:focus-visible { outline: 3px solid var(--gold-400); outline-offset: -3px; }
+/* Gold play badge — solid navy disc, gold triangle, matching the
+   site's navy + gold language (not a generic stock player look). */
+.top-play-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 58px;
+  height: 58px;
+  margin: -29px 0 0 -29px;
+  border-radius: 50%;
+  background: var(--navy-900);
+  border: 2px solid var(--gold-400);
+  color: var(--gold-400);
+  font-size: 20px;
+  line-height: 54px;
+  text-align: center;
+  padding-left: 4px; /* optical centring of the triangle */
+  box-shadow: 0 6px 18px rgba(10, 28, 51, .45);
+  transition: transform .25s ease, background-color .25s ease;
+  pointer-events: none;
+}
+.top-card:hover .top-play-badge,
+.top-featured:hover .top-play-badge { transform: scale(1.08); }
+/* The mounted player keeps the photo's box: grid cards 4/3, the
+   featured card fills its 340px column. The video is letterboxed
+   (object-fit: contain) on black so the whole vertical frame stays
+   visible — never cropped. */
+.top-video {
+  width: 100%;
+  background: #000;
+  position: relative;
+}
+.top-card .top-video { aspect-ratio: 4 / 3; }
+.top-video.big { height: 100%; }
+.top-video video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+.top-video-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #fff;
+  text-align: center;
+  padding: 24px;
+}
+.top-video-failed p { margin: 0; font-weight: 700; }
+.top-video-failed a { color: var(--gold-400); font-weight: 600; }
+
 /* Note under a topper whose name is not confirmed yet. */
 .top-name-soon {
   color: var(--muted);
@@ -288,12 +361,13 @@
   .top-hero-medal { display: none; }
   .top-reveal.in .top-score { animation: none; }
   .top-stat::before { transform: none; transition: none; }
-  .top-filters .chip, .top-card .top-photo, .top-featured .top-photo, .top-cta .btn { transition: none; }
+  .top-filters .chip, .top-card .top-photo, .top-featured .top-photo, .top-cta .btn, .top-play-badge { transition: none; }
 }
 
 @media (max-width: 860px) {
   .top-featured { grid-template-columns: 1fr; }
   .top-photo.big { aspect-ratio: 4 / 3; }
+  .top-video-poster.big, .top-video.big { aspect-ratio: 4 / 3; height: auto; }
   .top-featured-body { padding: 24px 22px; }
   .top-grid { grid-template-columns: repeat(2, 1fr); }
   .top-stats { grid-template-columns: 1fr; gap: 12px; }
