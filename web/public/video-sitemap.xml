@@ -3,24 +3,73 @@
      HOW TO ADD A VIDEO (for the admin/owner):
      1. Publish the course in /secure-admin/ → Courses.
      2. Copy one <url> block below, paste it before </urlset>.
-     3. Fill in: the course page URL, title, description, thumbnail,
+     3. Fill in: the page URL, title, description, thumbnail,
         the direct video file URL (Drive "uc?export=download" link works),
-        and the publish date (YYYY-MM-DD).
-     4. Save, redeploy — Google picks it up on the next crawl.
+        and the publish date (YYYY-MM-DD) when verified.
+     4. Save, redeploy — search engines pick it up on the next crawl.
      NOTE: only list videos the college owns or has the right to share. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
-  <!-- EXAMPLE (uncomment + fill when the first course is published):
   <url>
-    <loc>https://www.thebrightoncollege.org/brighton/en/courses/COURSE-ID</loc>
+    <loc>https://brightoniankpk.com/brighton/en/gallery</loc>
     <video:video>
-      <video:thumbnail_loc>https://www.thebrightoncollege.org/course-thumb.jpg</video:thumbnail_loc>
-      <video:title>Cyber Security Basics — Lesson 1</video:title>
-      <video:description>First lesson of the Cyber Security course at The Brighton College.</video:description>
-      <video:content_loc>https://drive.google.com/uc?export=download&amp;id=FILE-ID</video:content_loc>
-      <video:publication_date>2026-10-21</video:publication_date>
+      <video:thumbnail_loc>https://pub-657f762b08ff455cb0cff1c7f48b2217.r2.dev/gallery/teacher-1-thumb.webp</video:thumbnail_loc>
+      <video:title>Welcome Party 2026 — Highlights</video:title>
+      <video:description>Highlights from the Welcome Party 2026 at The Brighton College.</video:description>
+      <video:content_loc>https://drive.google.com/uc?export=download&amp;id=1uWkavYa8PI1RsFVj1dIjVZh1OnRzLHJl</video:content_loc>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+    <video:video>
+      <video:thumbnail_loc>https://pub-657f762b08ff455cb0cff1c7f48b2217.r2.dev/gallery/teacher-2-thumb.webp</video:thumbnail_loc>
+      <video:title>Excellence is Tested, Not Just Taught</video:title>
+      <video:description>Excellence is Tested, Not Just Taught — a message from the teachers of The Brighton College.</video:description>
+      <video:content_loc>https://drive.google.com/uc?export=download&amp;id=1tixCpPe3WDZ0xTe8UKpaF_SUs05ikMum</video:content_loc>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+    <video:video>
+      <video:thumbnail_loc>https://drive.google.com/thumbnail?id=1kpyDlI_G5TBKkWBplrMWGjzJJG0eCIgQ&amp;sz=w1000</video:thumbnail_loc>
+      <video:title>Hockey — Through to the Semi-Final</video:title>
+      <video:description>The Brighton College hockey team through to the semi-final.</video:description>
+      <video:content_loc>https://drive.google.com/uc?export=download&amp;id=1kpyDlI_G5TBKkWBplrMWGjzJJG0eCIgQ</video:content_loc>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+    <video:video>
+      <video:thumbnail_loc>https://drive.google.com/thumbnail?id=17qy7ZK-Lf1aeTokWq-8hGJoiyJQpTO6n&amp;sz=w1000</video:thumbnail_loc>
+      <video:title>MDCAT 2026 Qualifier — Munazza Hamid</video:title>
+      <video:description>Munazza Hamid, MDCAT 171, F.Sc 1129 — MDCAT 2026 qualifier at The Brighton College.</video:description>
+      <video:content_loc>https://drive.google.com/uc?export=download&amp;id=17qy7ZK-Lf1aeTokWq-8hGJoiyJQpTO6n</video:content_loc>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+    <video:video>
+      <video:thumbnail_loc>https://drive.google.com/thumbnail?id=1rY42FQteXJDDo1OS0ZB6L5RRTD-bHVmc&amp;sz=w1000</video:thumbnail_loc>
+      <video:title>Invitation for Our Respected Teachers</video:title>
+      <video:description>An invitation for the respected teachers of The Brighton College.</video:description>
+      <video:content_loc>https://drive.google.com/uc?export=download&amp;id=1rY42FQteXJDDo1OS0ZB6L5RRTD-bHVmc</video:content_loc>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+    <video:video>
+      <video:thumbnail_loc>https://drive.google.com/thumbnail?id=1m9xrHNKOCL91BcuHblt_vo_FI_cPoLQb&amp;sz=w1000</video:thumbnail_loc>
+      <video:title>Campus Life</video:title>
+      <video:description>Campus life at The Brighton College.</video:description>
+      <video:content_loc>https://drive.google.com/uc?export=download&amp;id=1m9xrHNKOCL91BcuHblt_vo_FI_cPoLQb</video:content_loc>
       <video:family_friendly>yes</video:family_friendly>
     </video:video>
   </url>
-  -->
+  <url>
+    <loc>https://brightoniankpk.com/brighton/en/toppers</loc>
+    <video:video>
+      <video:thumbnail_loc>https://pub-657f762b08ff455cb0cff1c7f48b2217.r2.dev/toppers/munazza-hamid.jpg</video:thumbnail_loc>
+      <video:title>Munazza Hamid — MDCAT 2026 Qualifier</video:title>
+      <video:description>Munazza Hamid, MDCAT 171, F.Sc 1129 — MDCAT 2026 qualifier at The Brighton College.</video:description>
+      <video:content_loc>https://drive.google.com/uc?export=download&amp;id=17qy7ZK-Lf1aeTokWq-8hGJoiyJQpTO6n</video:content_loc>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+    <video:video>
+      <video:thumbnail_loc>https://drive.google.com/thumbnail?id=1m9xrHNKOCL91BcuHblt_vo_FI_cPoLQb&amp;sz=w1000</video:thumbnail_loc>
+      <video:title>Aroosa Gul — 3rd Position, BISE Mardan</video:title>
+      <video:description>Aroosa Gul, 3rd position, BISE Mardan — Computer Science.</video:description>
+      <video:content_loc>https://drive.google.com/uc?export=download&amp;id=1m9xrHNKOCL91BcuHblt_vo_FI_cPoLQb</video:content_loc>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+  </url>
 </urlset>
