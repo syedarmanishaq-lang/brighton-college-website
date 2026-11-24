@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   sba, backendReady,
   fetchNews, fetchCourses, fetchResults, fetchMaterial, fetchBooks, fetchGallery, fetchGalleryPhotos, fetchGalleryImages,
-  fetchToppers, fetchFaculty,
+  fetchToppers, fetchFaculty, hasResultSection,
   fetchApplications, markReviewed, adminCreate, adminUpdate, adminDelete,
   adminDeleteWithStorage, uploadImage, MAX_UPLOAD_MB, fetchColleges,
   fetchStorageUsage, STORAGE_QUOTA_BYTES,
@@ -18,7 +18,7 @@ import { getLocalCollege, knownLocalSlugs, DEFAULT_COLLEGE_SLUG } from '../data/
 import { NEWS_CATEGORIES, TEST_TYPES, CLASS_LEVELS, FILE_TYPES, PROGRAMS } from '../data/college.js';
 import { clearDriveCache } from '../lib/drive.js';
 import { uploadToR2, uploadFileToR2, MAX_DOC_MB, driveImageUrl } from '../lib/r2upload.js';
-import { getSetting, setSetting, getSettingByKey, setSettingByKey, INFO_FIELDS, getInfoSettings, setInfoSettings } from '../lib/settings.js';
+import { getSetting, setSetting, getSettingByKey, setSettingByKey, INFO_FIELDS, getInfoSettings, setInfoSettings, parseResultSections } from '../lib/settings.js';
 import { WHATSAPP_NUMBER } from '../config.js';
 
 /* Tables scoped to a college — admin writes stamp the active college_id. */
@@ -284,7 +284,7 @@ const T = ({ v, on }) => <input value={v ?? ''} onChange={(e) => on(e.target.val
 const TA = ({ v, on, rows }) => <textarea value={v || ''} rows={rows || 4} onChange={(e) => on(e.target.value)} />;
 const Sel = ({ v, on, opts }) => (
   <select value={v || ''} onChange={(e) => on(e.target.value)}>
-    {opts.map((o) => <option key={o} value={o}>{o}</option>)}
+    {opts.map((o) => <option key={o === '' ? 'blank' : o} value={o}>{o === '' ? '— None —' : o}</option>)}
   </select>
 );
 
@@ -504,6 +504,9 @@ function Crud({ title, table, columns, rows, loading, reload, onChanged, college
         let v = editing[c.key];
         if (c.type === 'number') v = v === '' ? (c.def !== undefined ? c.def : null) : Number(v);
         if (c.type === 'check') v = !!v;
+        /* Optional per-column guard — e.g. a dependent select whose
+           value is only valid for the current value of another field. */
+        if (c.sanitize) v = c.sanitize(v, editing);
         payload[c.key] = v;
       });
       // Stamp the active college on every college-scoped write.
@@ -592,7 +595,9 @@ function Crud({ title, table, columns, rows, loading, reload, onChanged, college
                   {c.type === 'textarea'
                     ? <TA v={editing[c.key]} rows={c.rows} on={(v) => setEditing({ ...editing, [c.key]: v })} />
                     : c.type === 'select'
-                      ? <Sel v={editing[c.key]} opts={c.opts} on={(v) => setEditing({ ...editing, [c.key]: v })} />
+                      ? <Sel v={editing[c.key]}
+                          opts={typeof c.opts === 'function' ? c.opts(editing) : c.opts}
+                          on={(v) => setEditing({ ...editing, [c.key]: v })} />
                       : c.type === 'check'
                         ? <input type="checkbox" checked={!!editing[c.key]}
                             onChange={(e) => setEditing({ ...editing, [c.key]: e.target.checked })} style={{ width: 20, height: 20 }} />
@@ -758,73 +763,105 @@ function CoursesSection({ collegeId, notify }) {
   );
 }
 
-/* Class categories for results — the admin creates/edits these himself.
-   Stored as a JSON list in site_settings key 'result_classes' (per
-   college); the public Results page reads the same key, so the filter
-   chips always match this list. Default: 11th + 12th (the old fixed
-   list), so nothing changes until he edits it. Each item keeps a stable
-   id (its name when loaded, 'new-…' when just added): renaming a
-   category also renames it on the results already saved under the old
-   name; deleting one only hides it from the filter — its results still
-   show under "All Classes". */
-function ClassCategories({ collegeId, cats, setCats, notify }) {
+/* Sections (categories) inside each class — the admin creates these
+   himself. The college has exactly TWO classes (11th, 12th); a section
+   (e.g. Al Baatani, Al Hitam) lives UNDER one class, so pick the class
+   first, then manage its sections. Stored as a JSON object in
+   site_settings key 'result_sections' (per college):
+   {"11th": [...], "12th": [...]}. The public Results page shows the
+   section filter only after a class is picked, and the result form
+   offers only that class's sections. Each item keeps a stable id (its
+   name when loaded, 'new-…' when just added): renaming a section also
+   renames it on the results already saved under the old name (within
+   that class); deleting one only hides it from the filter — its results
+   still show under "All sections". */
+function SectionCategories({ collegeId, sections, setSections, hasSection, notify }) {
+  const [activeClass, setActiveClass] = useState('11th');
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const list = (sections && sections[activeClass]) || [];
 
+  function setList(next) {
+    setSections({ ...(sections || {}), [activeClass]: next });
+  }
   function addDraft() {
     const name = draft.trim();
     if (!name) return;
-    if (cats.some((c) => c.name === name)) { setMsg('⚠️ "' + name + '" is already in the list.'); return; }
-    setCats([...cats, { id: 'new-' + Date.now(), name }]);
+    if (list.some((c) => c.name === name)) { setMsg('⚠️ "' + name + '" is already in ' + activeClass + '.'); return; }
+    setList([...list, { id: 'new-' + Date.now(), name }]);
     setDraft(''); setMsg('');
   }
 
   async function save() {
-    const clean = cats.map((c) => String(c.name).trim()).filter(Boolean);
-    if (clean.length === 0) { setMsg('⚠️ At least one class is needed.'); return; }
-    if (new Set(clean).size !== clean.length) { setMsg('⚠️ Class names must be different from each other.'); return; }
+    const cleanAll = {};
+    for (const cls of CLASS_LEVELS) {
+      const clean = ((sections && sections[cls]) || []).map((c) => String(c.name).trim()).filter(Boolean);
+      if (new Set(clean).size !== clean.length) { setMsg('⚠️ Section names must be different from each other.'); return; }
+      cleanAll[cls] = clean;
+    }
     setBusy(true); setMsg('');
     try {
-      for (const c of cats) {
-        const from = String(c.id), to = String(c.name).trim();
-        if (!from || from.startsWith('new-') || !to || from === to) continue;
-        if (!clean.includes(to)) continue;
-        await sba.patch(
-          '/rest/v1/test_results?class_level=eq.' + encodeURIComponent(from)
-          + '&college_id=eq.' + encodeURIComponent(collegeId),
-          { class_level: to });
+      /* Rename on saved results, per class (only when the section
+         column exists — before migration 014 there is nothing to
+         rename, since no result can carry a section yet). */
+      if (hasSection) {
+        for (const cls of CLASS_LEVELS) {
+          for (const c of (sections && sections[cls]) || []) {
+            const from = String(c.id), to = String(c.name).trim();
+            if (!from || from.startsWith('new-') || !to || from === to) continue;
+            if (!cleanAll[cls].includes(to)) continue;
+            await sba.patch(
+              '/rest/v1/test_results?class_level=eq.' + encodeURIComponent(cls)
+              + '&section=eq.' + encodeURIComponent(from)
+              + '&college_id=eq.' + encodeURIComponent(collegeId),
+              { section: to });
+          }
+        }
       }
-      await setSetting(collegeId, 'result_classes', JSON.stringify(clean));
-      setCats(clean.map((name) => ({ id: name, name })));
-      setMsg('✅ Categories saved.');
-      notify && notify('Class categories saved. ✅');
+      await setSetting(collegeId, 'result_sections', JSON.stringify(cleanAll));
+      const withIds = {};
+      for (const cls of CLASS_LEVELS) withIds[cls] = cleanAll[cls].map((name) => ({ id: name, name }));
+      setSections(withIds);
+      setMsg('✅ Sections saved.');
+      notify && notify('Result sections saved. ✅');
     } catch (e) { setMsg('⚠️ Save failed: ' + e.message); }
     setBusy(false);
   }
 
   return (
     <div className="card" style={{ marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0 }}>Class categories</h3>
+      <h3 style={{ marginTop: 0 }}>Sections (categories) — inside each class</h3>
       <p className="muted sm" style={{ marginTop: 0 }}>
-        These are the classes on the Results page filter and in the Class
-        dropdown below. Add your own, rename or remove them — renaming
-        also updates the results already saved under the old name.
+        The college has only two classes — <b>11th and 12th</b>. A section
+        like <b>Al Baatani</b> or <b>Al Hitam</b> lives inside one class:
+        pick the class, then add its sections. When a result is uploaded,
+        the class is picked first and only that class's sections are offered.
+        Renaming a section also updates the results already saved under the
+        old name.
       </p>
-      {cats.map((c, i) => (
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        {CLASS_LEVELS.map((cls) => (
+          <button key={cls} type="button" className={'chip' + (activeClass === cls ? ' on' : '')}
+            onClick={() => { setActiveClass(cls); setMsg(''); }}>
+            {cls}
+          </button>
+        ))}
+      </div>
+      {list.map((c, i) => (
         <div key={c.id} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <input value={c.name} onChange={(e) => setCats(cats.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
-            aria-label={'Class ' + (i + 1)} />
+          <input value={c.name} onChange={(e) => setList(list.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
+            aria-label={'Section ' + (i + 1) + ' in ' + activeClass} />
           <button type="button" className="chip chip-danger"
-            onClick={() => setCats(cats.filter((_, j) => j !== i))}>Delete</button>
+            onClick={() => setList(list.filter((_, j) => j !== i))}>Delete</button>
         </div>
       ))}
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-        <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="New class, e.g. 9th"
+        <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={'New section in ' + activeClass + ', e.g. Al Baatani'}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addDraft(); } }} />
-        <button type="button" className="btn btn-outline" onClick={addDraft}>+ Add class</button>
+        <button type="button" className="btn btn-outline" onClick={addDraft}>+ Add section</button>
       </div>
-      <button type="button" className="btn btn-gold" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save categories'}</button>
+      <button type="button" className="btn btn-gold" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save sections'}</button>
       {msg && <div className="sm" style={{ marginTop: 8 }}>{msg}</div>}
     </div>
   );
@@ -832,24 +869,36 @@ function ClassCategories({ collegeId, cats, setCats, notify }) {
 
 function ResultsSection({ collegeId, notify }) {
   const [rows, loading, reload] = useRows(() => fetchResults({ collegeId }));
-  const [cats, setCats] = useState(() => CLASS_LEVELS.map((name) => ({ id: name, name })));
+  const [sections, setSections] = useState(() => ({ '11th': [], '12th': [] }));
+  const [hasSection, setHasSection] = useState(false);
   useEffect(() => { reload(); }, [collegeId]);
   useEffect(() => {
     let live = true;
     if (!collegeId) return undefined;
-    getSetting(collegeId, 'result_classes', JSON.stringify(CLASS_LEVELS))
+    getSetting(collegeId, 'result_sections', '{}')
       .then((raw) => {
         if (!live) return;
-        try {
-          const list = JSON.parse(raw || '[]');
-          if (Array.isArray(list) && list.length > 0) {
-            setCats(list.map((n) => ({ id: String(n), name: String(n) })));
-          }
-        } catch {}
+        const parsed = parseResultSections(raw);
+        const withIds = {};
+        for (const cls of CLASS_LEVELS) withIds[cls] = (parsed[cls] || []).map((n) => ({ id: n, name: n }));
+        setSections(withIds);
       }).catch(() => {});
     return () => { live = false; };
   }, [collegeId]);
-  const catNames = cats.map((c) => String(c.name).trim()).filter(Boolean);
+  /* The section column arrives with migration 014; before it runs,
+     the section picker stays hidden so result uploads keep working. */
+  useEffect(() => {
+    let live = true;
+    hasResultSection().then((ok) => { if (live) setHasSection(ok); });
+    return () => { live = false; };
+  }, []);
+  const sectionsFor = (cls) => ((sections && sections[cls]) || []).map((x) => x.name).filter(Boolean);
+  const sectionCol = hasSection ? [
+    { key: 'section', label: 'Section', type: 'select',
+      opts: (form) => ['', ...sectionsFor(form.class_level || '11th')],
+      sanitize: (v, form) => sectionsFor(form.class_level || '11th').includes(v) ? v : '',
+      def: '' },
+  ] : [];
   return (
     <>
       <div className="alert ok" style={{ marginBottom: 16 }}>
@@ -859,13 +908,18 @@ function ResultsSection({ collegeId, notify }) {
         <b>(4)</b> leave all three empty and enter subject marks in the <b>Marks</b> grid.
         A result with <b>Published</b> off is a <b>draft</b> — saved, but hidden
         from the public Results page until you turn it on.
+        The college has only two classes — <b>11th and 12th</b>. Pick the class,
+        then the <b>section</b> (e.g. Al Baatani) it belongs to; manage sections
+        in the box below.
+        {!hasSection && <> Sections need the database update first — until it runs, results save without a section.</>}
       </div>
-      <ClassCategories collegeId={collegeId} cats={cats} setCats={setCats} notify={notify} />
+      <SectionCategories collegeId={collegeId} sections={sections} setSections={setSections} hasSection={hasSection} notify={notify} />
       <Crud title="Test Results" table="test_results" rows={rows} loading={loading} reload={reload} collegeId={collegeId}
         fileField="image_url" notify={notify}
         columns={[
           { key: 'title', label: 'Title', full: true },
-          { key: 'class_level', label: 'Class', type: 'select', opts: catNames.length ? catNames : CLASS_LEVELS, def: catNames[0] || '11th' },
+          { key: 'class_level', label: 'Class', type: 'select', opts: CLASS_LEVELS, def: '11th' },
+          ...sectionCol,
           { key: 'test_type', label: 'Type', type: 'select', opts: TEST_TYPES, def: 'weekly' },
           { key: 'subject', label: 'Subject', hide: true },
           { key: 'image_url', label: 'Result picture (upload)', type: 'imageupload', bucket: 'results', full: true, hide: true },

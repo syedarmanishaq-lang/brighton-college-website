@@ -34,7 +34,7 @@ const SETTING_TTL_MS = 60 * 1000;
    separate Supabase requests per page load; one bulk query returns
    them all at once. Shared single-flight + 60s cache, same as
    single-key reads. */
-const SWITCH_KEYS = ['admissions_open', 'show_ads', 'rewarded_ads', 'result_classes'];
+const SWITCH_KEYS = ['admissions_open', 'show_ads', 'rewarded_ads', 'result_sections'];
 const bulkInflight = new Map(); /* collegeId -> Promise<object|null> */
 const bulkFresh = new Map(); /* collegeId -> { at, values } */
 
@@ -196,23 +196,34 @@ export function useAdmissionsOpen() {
   return useSiteSetting('admissions_open', 'false') === 'true';
 }
 
-/* Result class categories (admin-editable). Stored as a JSON list in
-   site_settings key 'result_classes'; default is the old fixed list
-   (11th + 12th), so the public filter is unchanged until the admin
-   edits it. */
-export function parseResultClasses(raw) {
+/* Result sections per class (admin-editable). The college has exactly
+   TWO classes (11th, 12th) — the categories the admin creates (e.g. Al
+   Baatani, Al Hitam) are SECTIONS inside a class, not classes
+   themselves. Stored as a JSON object in site_settings key
+   'result_sections': {"11th": [...], "12th": [...]}. Default: no
+   sections yet, so the public page shows no section filter until the
+   admin adds some. (The earlier flat 'result_classes' setting stored
+   categories at the class level — the wrong place — and is no longer
+   read anywhere.) */
+export function parseResultSections(raw) {
   try {
-    const list = JSON.parse(raw || '[]');
-    if (Array.isArray(list)) {
-      const clean = list.map((c) => String(c).trim()).filter(Boolean);
-      if (clean.length > 0) return [...new Set(clean)];
+    const obj = JSON.parse(raw || '{}');
+    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+      const out = {};
+      for (const cls of CLASS_LEVELS) {
+        const list = Array.isArray(obj[cls]) ? obj[cls].map((s) => String(s).trim()).filter(Boolean) : [];
+        out[cls] = [...new Set(list)];
+      }
+      return out;
     }
   } catch {}
-  return [...CLASS_LEVELS];
+  const empty = {};
+  for (const cls of CLASS_LEVELS) empty[cls] = [];
+  return empty;
 }
-export function useResultClasses() {
-  const raw = useSiteSetting('result_classes', JSON.stringify(CLASS_LEVELS));
-  return parseResultClasses(raw);
+export function useResultSections() {
+  const raw = useSiteSetting('result_sections', '{}');
+  return parseResultSections(raw);
 }
 
 /* College info fields — admin-editable identity/contact details.

@@ -65,13 +65,26 @@ export const fetchNewsById = (id, collegeId, opts) => {
 /* ---------- Test results ---------- */
 /* Public reads show only published results. The admin passes no flag
    (and sees drafts too) — same pattern as fetchNews/includeDrafts. */
-export const fetchResults = ({ classLevel, testType, collegeId, publishedOnly } = {}) => {
+export const fetchResults = ({ classLevel, section, testType, collegeId, publishedOnly } = {}) => {
   let q = '/rest/v1/test_results?select=*&order=published_at.desc';
   if (publishedOnly) q += '&published=eq.true';
   if (classLevel) q += '&class_level=eq.' + encodeURIComponent(classLevel);
+  if (section) q += '&section=eq.' + encodeURIComponent(section);
   if (testType) q += '&test_type=eq.' + encodeURIComponent(testType);
   return sba.get(scoped(q, collegeId));
 };
+
+/* Does the test_results table have the `section` column yet?
+   Migration 014 adds it; before that runs, the section UI stays
+   hidden so nothing breaks. Cached per page load. */
+let _hasResultSection = null;
+export function hasResultSection() {
+  if (!_hasResultSection) {
+    _hasResultSection = sba.get('/rest/v1/test_results?select=section&limit=1')
+      .then(() => true).catch(() => false);
+  }
+  return _hasResultSection;
+}
 
 /* ---------- Admissions ---------- */
 export const submitApplication = (app) => sba.post('/rest/v1/admission_applications', app);
