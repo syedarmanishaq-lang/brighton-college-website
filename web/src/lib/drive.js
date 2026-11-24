@@ -23,7 +23,27 @@ export async function driveList(folderId) {
 }
 
 export function drivePreviewUrl(fileId) {
-  return `https://drive.google.com/file/d/${fileId}/preview`;
+  return `https://drive.google.com/file/d/${extractDriveId(fileId)}/preview`;
+}
+
+/* Pull a Drive file/folder ID out of whatever is pasted: a bare ID, or
+   a full share link (/file/d/ID/..., /drive/folders/ID, open?id=ID,
+   uc?id=ID, thumbnail?id=ID). The admin can paste the link copied from
+   Drive anywhere a Drive ID is asked for — Results, Books, Material,
+   Gallery, course folders — and the ID is taken from it automatically.
+   Returns the trimmed input unchanged when nothing matches, so a value
+   is never wiped by a paste the parser does not recognise. */
+export function extractDriveId(input) {
+  const s = String(input || '').trim();
+  if (!s) return '';
+  let m = s.match(/\/d\/([A-Za-z0-9_-]{10,})/);
+  if (m) return m[1];
+  m = s.match(/\/folders\/([A-Za-z0-9_-]{10,})/);
+  if (m) return m[1];
+  m = s.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+  if (m) return m[1];
+  if (/^[A-Za-z0-9_-]{10,}$/.test(s)) return s;
+  return s;
 }
 
 /* Get a single file/folder's metadata (used for Drive-folder courses:
@@ -39,10 +59,11 @@ export async function driveGetFile(fileId) {
 
 export function driveDownloadUrl(fileId) {
   /* Direct streaming via Drive API (supports range requests, works for public files) */
+  const id = extractDriveId(fileId);
   if (DRIVE_API_KEY) {
-    return `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&key=${encodeURIComponent(DRIVE_API_KEY)}`;
+    return `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media&key=${encodeURIComponent(DRIVE_API_KEY)}`;
   }
-  return `https://drive.google.com/uc?export=download&id=${fileId}`;
+  return `https://drive.google.com/uc?export=download&id=${id}`;
 }
 
 /* Check if a folder is a "bundle" (contains sub-courses, not direct videos).

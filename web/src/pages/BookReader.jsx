@@ -5,6 +5,7 @@ import { useParams } from 'react-router-dom';
 import { LLink, useLang } from '../i18n/LangContext.jsx';
 import Seo from '../seo/Seo.jsx';
 import { sba, backendReady, fetchBooks } from '../lib/supabase.js';
+import { extractDriveId } from '../lib/drive.js';
 
 export default function BookReader() {
   const { id } = useParams();
@@ -37,7 +38,7 @@ export default function BookReader() {
       .catch(() => {});
   }, [book, id]);
 
-  const embedUrl = book ? `https://drive.google.com/file/d/${book.drive_file_id}/preview` : null;
+  const embedUrl = book ? `https://drive.google.com/file/d/${extractDriveId(book.drive_file_id)}/preview` : null;
 
   return (
     <>
@@ -73,7 +74,7 @@ export default function BookReader() {
                   find Download. The size is the book's real file_size_mb. */}
               <div style={{ marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
                 <a
-                  href={`https://drive.google.com/uc?export=download&id=${book.drive_file_id}`}
+                  href={`https://drive.google.com/uc?export=download&id=${extractDriveId(book.drive_file_id)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-gold"
@@ -82,7 +83,7 @@ export default function BookReader() {
                   {book.file_size_mb ? ` (${book.file_size_mb} MB)` : ''}
                 </a>
                 <a
-                  href={`https://drive.google.com/file/d/${book.drive_file_id}/view`}
+                  href={`https://drive.google.com/file/d/${extractDriveId(book.drive_file_id)}/view`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn"

@@ -16,7 +16,7 @@ import {
 import { mapCollegeRow } from '../college/CollegeContext.jsx';
 import { getLocalCollege, knownLocalSlugs, DEFAULT_COLLEGE_SLUG } from '../data/colleges.js';
 import { NEWS_CATEGORIES, TEST_TYPES, CLASS_LEVELS, FILE_TYPES, PROGRAMS } from '../data/college.js';
-import { clearDriveCache } from '../lib/drive.js';
+import { clearDriveCache, extractDriveId } from '../lib/drive.js';
 import { uploadToR2, uploadFileToR2, MAX_DOC_MB, driveImageUrl } from '../lib/r2upload.js';
 import { getSetting, setSetting, getSettingByKey, setSettingByKey, INFO_FIELDS, getInfoSettings, setInfoSettings, parseResultSections } from '../lib/settings.js';
 import { WHATSAPP_NUMBER } from '../config.js';
@@ -745,16 +745,16 @@ function CoursesSection({ collegeId, notify }) {
         college's Drive library — edit a title, thumbnail or sort order
         here and it changes on the public Courses page right away. To
         add a course, create one <b>Drive folder per course</b> (e.g. "Cyber Security"),
-        share it as <b>"Anyone with the link can view"</b>, then paste the folder ID below.
+        share it as <b>"Anyone with the link can view"</b>, then paste the folder link or ID below.
         Videos inside are listed automatically — no need to add them one by one.
-        <br />Folder ID = the long code in the folder's URL: drive.google.com/drive/folders/<b>PASTE_THIS_PART</b>
+        <br />A full folder link works too — the ID is taken from it automatically.
       </div>
       <Crud title="Video Courses" table="courses" rows={rows} loading={loading} reload={reload} collegeId={collegeId}
         notify={notify}
         columns={[
           { key: 'title', label: 'Course title', full: true },
           { key: 'description', label: 'Description', type: 'textarea', rows: 3, full: true, hide: true },
-          { key: 'drive_folder_id', label: 'Drive folder ID', full: true },
+          { key: 'drive_folder_id', label: 'Drive folder link or ID', sanitize: (v) => extractDriveId(v), full: true },
           { key: 'thumbnail_url', label: 'Thumbnail image URL', full: true, hide: true },
           { key: 'class_level', label: 'Class', type: 'select', opts: ['11th', '12th', 'General'], def: 'General' },
           { key: 'sort', label: 'Sort order', type: 'number', def: 0 },
@@ -904,7 +904,7 @@ function ResultsSection({ collegeId, notify }) {
       <div className="alert ok" style={{ marginBottom: 16 }}>
         💡 Add a result four ways: <b>(1)</b> upload a <b>result picture</b> (photo of the sheet),{' '}
         <b>(2)</b> upload a <b>PDF / Word document</b> straight from your laptop or phone,{' '}
-        <b>(3)</b> paste a <b>Drive file ID</b> (PDF/image of the result sheet), or{' '}
+        <b>(3)</b> paste a <b>Drive link or file ID</b> (PDF/image of the result sheet — share the file as "Anyone with the link can view"), or{' '}
         <b>(4)</b> leave all three empty and enter subject marks in the <b>Marks</b> grid.
         A result with <b>Published</b> off is a <b>draft</b> — saved, but hidden
         from the public Results page until you turn it on.
@@ -924,7 +924,7 @@ function ResultsSection({ collegeId, notify }) {
           { key: 'subject', label: 'Subject', hide: true },
           { key: 'image_url', label: 'Result picture (upload)', type: 'imageupload', bucket: 'results', full: true, hide: true },
           { key: 'file_url', label: 'Result file — PDF / Word (upload)', type: 'fileupload', bucket: 'results', full: true, hide: true },
-          { key: 'drive_file_id', label: 'Drive file ID (optional)', full: true, hide: true },
+          { key: 'drive_file_id', label: 'Drive link or file ID (optional)', sanitize: (v) => extractDriveId(v), full: true, hide: true },
           { key: 'file_type', label: 'File type', type: 'select', opts: FILE_TYPES, def: 'document', hide: true },
           { key: 'result_data', label: 'Marks', type: 'marksgrid', full: true, hide: true },
           { key: 'published_at', label: 'Published', type: 'date', hide: true, def: new Date().toISOString() },
@@ -1045,7 +1045,7 @@ function BooksSection({ notify }) {
           { key: 'board', label: 'Board', type: 'select', opts: ['KPK', 'Punjab', 'Federal', 'Sindh', 'Balochistan'], def: 'KPK' },
           { key: 'class_level', label: 'Class', type: 'select', opts: ['11th', '12th'], def: '11th' },
           { key: 'subject', label: 'Subject' },
-          { key: 'drive_file_id', label: 'Drive file ID', full: true },
+          { key: 'drive_file_id', label: 'Drive link or file ID', sanitize: (v) => extractDriveId(v), full: true },
           { key: 'file_size_mb', label: 'Size (MB)', type: 'number', hide: true },
         ]} />
     </div>
@@ -1068,7 +1068,7 @@ function MaterialSection({ collegeId, notify }) {
           { key: 'subject', label: 'Subject' },
           { key: 'class_level', label: 'Class', type: 'select', opts: CLASS_LEVELS, def: '11th' },
           { key: 'file_type', label: 'Type', type: 'select', opts: FILE_TYPES, def: 'document' },
-          { key: 'drive_file_id', label: 'Drive file ID', full: true },
+          { key: 'drive_file_id', label: 'Drive link or file ID', sanitize: (v) => extractDriveId(v), full: true },
         ]} />
     </>
   );
@@ -1263,7 +1263,7 @@ function GallerySection({ collegeId, notify }) {
         columns={[
           { key: 'title', label: 'Title', full: true },
           { key: 'description', label: 'Description', type: 'textarea', rows: 2, full: true, hide: true },
-          { key: 'drive_file_id', label: 'Drive file ID', full: true },
+          { key: 'drive_file_id', label: 'Drive link or file ID', sanitize: (v) => extractDriveId(v), full: true },
           { key: 'media_type', label: 'Type', type: 'select', opts: ['photo'], def: 'photo', hide: true },
           { key: 'display_order', label: 'Order (0 = first)', type: 'number', def: nextOrder },
           { key: 'is_active', label: 'Show in gallery', type: 'check', def: true },
@@ -1278,7 +1278,7 @@ function GallerySection({ collegeId, notify }) {
         notify={notify} extraActions={mediaOrderButtons(reloadVideos)}
         columns={[
           { key: 'title', label: 'Title', full: true },
-          { key: 'drive_file_id', label: 'Drive file ID', full: true },
+          { key: 'drive_file_id', label: 'Drive link or file ID', sanitize: (v) => extractDriveId(v), full: true },
           { key: 'media_type', label: 'Type', type: 'select', opts: ['video'], def: 'video', hide: true },
           { key: 'display_order', label: 'Order (0 = first)', type: 'number', def: nextOrder },
           { key: 'is_active', label: 'Show in gallery', type: 'check', def: true },

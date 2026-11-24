@@ -5,7 +5,7 @@ import { useCollege, useSite } from '../college/CollegeContext.jsx';
 import { fetchGallery, fetchGalleryImages, backendReady } from '../lib/supabase.js';
 import { isRealCollegeId } from '../lib/settings.js';
 import { cacheFresh, cacheSet } from '../lib/cache.js';
-import { driveDownloadUrl } from '../lib/drive.js';
+import { driveDownloadUrl, extractDriveId } from '../lib/drive.js';
 import Seo from '../seo/Seo.jsx';
 
 /* Public reads cache: 5 minutes (same pattern as News). Repeat visits
@@ -17,10 +17,10 @@ const GALLERY_TTL_MS = 5 * 60 * 1000;
 
 /* Grid thumbs are small (220px cards) — w400 is plenty. The lightbox /
    full view keeps w1000. Never use lh3 thumbnailLinks (403 anonymous). */
-const DRIVE_THUMB = (id) => `https://drive.google.com/thumbnail?id=${id}&sz=w400`;
-const DRIVE_FULL = (id) => `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+const DRIVE_THUMB = (id) => `https://drive.google.com/thumbnail?id=${extractDriveId(id)}&sz=w400`;
+const DRIVE_FULL = (id) => `https://drive.google.com/thumbnail?id=${extractDriveId(id)}&sz=w1000`;
 /* Fallback stream URL if the Drive API stream ever fails (e.g. key revoked). */
-const DRIVE_UC = (id) => `https://drive.google.com/uc?export=download&id=${id}`;
+const DRIVE_UC = (id) => `https://drive.google.com/uc?export=download&id=${extractDriveId(id)}`;
 
 /* The 5 HD gallery photos moved from Drive to Cloudflare R2 (2026-11-21):
    same files, served from Cloudflare's edge instead of Drive thumbnails
