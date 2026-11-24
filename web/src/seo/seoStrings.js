@@ -46,11 +46,11 @@ export const SEO_PAGES = {
   faculty: {
     en: {
       title: 'Our Faculty | The Brighton College',
-      desc: 'Meet the 24 qualified teachers of The Brighton College, Swabi — PhD scholars, M.Phil and Masters faculty for every subject.',
+      desc: 'Meet the faculty of The Brighton College, Swabi — qualified teachers for every subject, from Pre-Medical to Pre-Engineering and Computer Science.',
     },
     ur: {
       title: 'ہمارے اساتذہ | دی برائٹن کالج',
-      desc: 'دی برائٹن کالج، صوابی کے 24 اہل اساتذہ سے ملیں — ہر مضمون کے لیے پی ایچ ڈی اسکالرز، ایم فل اور ماسٹرز فیکلٹی۔',
+      desc: 'دی برائٹن کالج، صوابی کے اساتذہ سے ملیں — ہر مضمون کے لیے اہل فیکلٹی۔',
     },
   },
   courses: {

@@ -1,7 +1,7 @@
 /* Per-page SEO head manager (no extra dependency).
    <Seo page="about" /> or <Seo page="home" article={{...}} faq /> inside a page
    updates: <title>, meta description/keywords, Open Graph, Twitter cards,
-   canonical, hreflang (en/ur), and injects JSON-LD (WebSite always;
+   canonical, hreflang (en/en-US/en-GB/ur), and injects JSON-LD (WebSite always;
    CollegeOrUniversity on home; BreadcrumbList everywhere; FAQPage when
    faq=true; NewsArticle when article is passed).
    og:site_name is always "The Brighton College" (SITE NAME RULE). */
@@ -25,6 +25,22 @@ function upsertMeta(attr, key, content) {
     document.head.appendChild(el);
   }
   el.setAttribute('content', content);
+}
+
+function upsertMetaList(attr, key, values) {
+  // Some metas repeat (og:locale:alternate needs one tag per locale):
+  // drop every existing tag with this key, then append one per value.
+  const sel = attr === 'property'
+    ? `meta[property="${key}"]`
+    : `meta[${attr}="${key}"]`;
+  document.head.querySelectorAll(sel).forEach((el) => el.remove());
+  values.forEach((content) => {
+    if (!content) return;
+    const el = document.createElement('meta');
+    el.setAttribute(attr, key);
+    el.setAttribute('content', content);
+    document.head.appendChild(el);
+  });
 }
 
 function upsertLink(rel, href, hreflang) {
@@ -74,6 +90,7 @@ export default function Seo({ page = 'home', article = null, faq = false, pathOv
     document.title = title;
     upsertMeta('name', 'description', desc);
     upsertMeta('name', 'keywords', 'The Brighton College, Swabi college, intermediate Swabi, 11th 12th Swabi, pre-medical, pre-engineering, Mardan board, admissions Swabi');
+    upsertMeta('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1');
     // Open Graph
     upsertMeta('property', 'og:site_name', SITE_NAME);
     upsertMeta('property', 'og:type', article ? 'article' : 'website');
@@ -81,20 +98,25 @@ export default function Seo({ page = 'home', article = null, faq = false, pathOv
     upsertMeta('property', 'og:description', desc);
     upsertMeta('property', 'og:url', url);
     upsertMeta('property', 'og:locale', lang === 'ur' ? 'ur_PK' : 'en_US');
-    upsertMeta('property', 'og:locale:alternate', lang === 'ur' ? 'en_US' : 'ur_PK');
+    // USA/UK: both English locales are alternates (one English version serves both).
+    upsertMetaList('property', 'og:locale:alternate', lang === 'ur' ? ['en_US', 'en_GB'] : ['en_GB', 'ur_PK']);
     upsertMeta('property', 'og:image', ogImageFinal);
     upsertMeta('property', 'og:image:width', '1200');
     upsertMeta('property', 'og:image:height', '630');
     upsertMeta('property', 'og:image:alt', title);
     // Twitter
     upsertMeta('name', 'twitter:card', 'summary_large_image');
+    upsertMeta('name', 'twitter:site', '@brightoncollege');
     upsertMeta('name', 'twitter:title', title);
     upsertMeta('name', 'twitter:description', desc);
     upsertMeta('name', 'twitter:image', ogImageFinal);
     // Canonical + hreflang — EN is the primary index language (international
     // audience: USA/UK/Canada), so canonical always points at the EN version.
+    // en-US + en-GB point at the same English page (one English version serves both).
     upsertLink('canonical', urlEn);
     upsertLink('alternate', urlEn, 'en');
+    upsertLink('alternate', urlEn, 'en-US');
+    upsertLink('alternate', urlEn, 'en-GB');
     upsertLink('alternate', urlUr, 'ur');
     upsertLink('alternate', urlEn, 'x-default');
 
