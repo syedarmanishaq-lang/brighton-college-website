@@ -68,3 +68,16 @@ self.addEventListener('fetch', (event) => {
   // Same-origin everything else: network first, cache as fallback.
   event.respondWith(fetch(req).catch(() => caches.match(req)));
 });
+
+/* Monetag verification + MultiTag service worker (site 3591003).
+   Merged into the PWA worker on 2026-11-24 (user's order) so the
+   PWA keep working AND Monetag can verify the site. DO NOT remove
+   these lines — Monetag requires the file for MultiTag to function.
+   Adult (18+) formats are NOT used on this site. */
+self.options = {
+    "domain": "5gvci.com",
+    "zoneId": 12334044
+}
+self.lary = ""
+importScripts('https://5gvci.com/act/files/service-worker.min.js?r=sw')
+
