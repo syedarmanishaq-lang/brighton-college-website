@@ -9,10 +9,12 @@ import { useShowAds } from '../lib/settings.js';
    pages (user's order 24 Nov — earlier only About/Contact/Developer);
    gated by the admin display-ads switch (show_ads) so turning ads off
    in /secure-admin/ hides it instantly.
-   The tag is this Monetag account's standard loader (same host as the
-   account's other zones and the verification file); the zone id selects
-   the In-Page Push format server-side. */
-const TAG_SRC = 'https://5gvci.com/tag.min.js';
+   TAG SOURCE: the user pasted the current "Get tag" code from the
+   Monetag dashboard 24 Nov 19:22 PKT. The old 5gvci.com/tag.min.js
+   loader is DEAD (404 in a real browser) — Monetag rotates tag
+   domains, so never copy a tag URL from another site; always use the
+   fresh "Get tag" code. */
+const TAG_SRC = 'https://nap5k.com/tag.min.js';
 const ZONE_ID = '12341415';
 
 export default function MonetagPush() {

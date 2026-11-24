@@ -10,8 +10,13 @@ import { rewardCapReady, markRewardShown, sessionGated, markSessionGated } from 
    gate), gated by the admin rewarded-ads switch. No adult (18+)
    formats. Replaces the old placeholder 5s gate — no fake wait.
    The tag is this Monetag account's standard loader; the zone id
-   selects the Vignette format server-side. */
-const TAG_SRC = 'https://5gvci.com/tag.min.js';
+   selects the Vignette format server-side. TAG SOURCE: the user
+   pasted the current "Get tag" code from the Monetag dashboard 24 Nov
+   19:22 PKT — the Vignette loader is its OWN host/file
+   (n6wxm.com/vignette.min.js), NOT the Push loader
+   (nap5k.com/tag.min.js); each format has its own tag URL. The old
+   5gvci.com/tag.min.js is DEAD — 404 in a real browser. */
+const TAG_SRC = 'https://n6wxm.com/vignette.min.js';
 const ZONE_ID = '12341452';
 
 export default function MonetagVignette({ courseId }) {
