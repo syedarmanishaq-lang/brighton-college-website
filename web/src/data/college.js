@@ -104,6 +104,6 @@ export const FACILITIES = [
 ];
 
 export const NEWS_CATEGORIES = ['Notice', 'Warning', 'Result', 'Event', 'Date Sheet', 'Admissions', 'General'];
-export const TEST_TYPES = ['weekly', 'monthly'];
+export const TEST_TYPES = ['weekly', 'monthly', 'mcqs'];
 export const CLASS_LEVELS = ['11th', '12th'];
 export const FILE_TYPES = ['video', 'document', 'image'];

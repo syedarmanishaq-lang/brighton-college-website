@@ -103,7 +103,7 @@ export default function Results() {
             {['All', ...TEST_TYPES].map((t) => (
               <button key={t} className={'chip' + (typ === t ? ' on' : '')} onClick={() => setTyp(t)}
                 style={{ textTransform: 'capitalize' }}>
-                {t === 'All' ? 'Weekly + Monthly' : t + ' tests'}
+                {t === 'All' ? 'All Tests' : t === 'mcqs' ? 'MCQs tests' : t + ' tests'}
               </button>
             ))}
           </div>
