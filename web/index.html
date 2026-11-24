@@ -8,9 +8,12 @@
          The script alone shows no ads — ad units / auto ads come after approval. -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4094330852617294"
        crossorigin="anonymous"></script>
-    <!-- Monetag In-Page Push — zone 12341415, site 3591003 (Verified).
+    <!-- Monetag Banner (In-Page Push Banner) — zone 12343664, site 3591003.
+         Replaces In-Page Push zone 12341415 (user order 24 Nov 23:40 —
+         Push bothers users like a notification; banner shows like a
+         native banner on the page instead).
          The code is pasted EXACTLY as Monetag's "Get tag" gives it
-         (user pasted it 24 Nov 19:22 PKT) and MUST stay static in this
+         (user pasted it 24 Nov 23:45 PKT) and MUST stay static in this
          file: the React dynamic injection was invisible to Monetag's
          installation check and no ad rendered. Monetag's own
          instruction is to paste the code into the html after <head>.
@@ -23,7 +26,7 @@
     <script>
     (function(){try{
       if(localStorage.getItem('bcp_setting_show_ads')==='false')return;
-      (function(s){s.dataset.zone='12341415',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
+      (function(s){s.dataset.zone='12343664',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
     }catch(e){}})();
     </script>
     <!-- Theme before first paint: no white flash in dark mode.
