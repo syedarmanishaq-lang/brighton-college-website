@@ -3,7 +3,6 @@ import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import Header from './components/Header.jsx';
 import Footer from './components/Footer.jsx';
 import AdSlot from './components/AdSlot.jsx';
-import MonetagPush from './components/MonetagPush.jsx';
 import BackToTop from './components/BackToTop.jsx';
 /* Route-level code splitting: only Home ships in the first bundle.
    Every other page loads as its own chunk when the user navigates to
@@ -97,7 +96,6 @@ function SiteChrome() {
   return (
     <>
       <OfflineBar />
-      <MonetagPush />
       <a className="skip-link" href="#main">Skip to content</a>
       <Header />
       <main id="main">
