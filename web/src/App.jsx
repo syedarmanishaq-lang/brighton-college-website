@@ -10,35 +10,68 @@ import BackToTop from './components/BackToTop.jsx';
    ~3.7s on a slow 3G connection) before the home page could even
    render. Home stays static so the landing page needs no extra hop. */
 import Home from './pages/Home.jsx';
-const About = lazy(() => import('./pages/About.jsx'));
-const Programs = lazy(() => import('./pages/Programs.jsx'));
-const Admissions = lazy(() => import('./pages/Admissions.jsx'));
-const News = lazy(() => import('./pages/News.jsx'));
-const NewsPost = lazy(() => import('./pages/NewsPost.jsx'));
-const Results = lazy(() => import('./pages/Results.jsx'));
-const Material = lazy(() => import('./pages/Material.jsx'));
-const Books = lazy(() => import('./pages/Books.jsx'));
-const PastPapers = lazy(() => import('./pages/PastPapers.jsx'));
-const BookReader = lazy(() => import('./pages/BookReader.jsx'));
-const Mcqs = lazy(() => import('./pages/Mcqs.jsx'));
-const Notes = lazy(() => import('./pages/Notes.jsx'));
-const Courses = lazy(() => import('./pages/Courses.jsx'));
-const CourseView = lazy(() => import('./pages/CourseView.jsx'));
-const Gallery = lazy(() => import('./pages/Gallery.jsx'));
-const StoryPage = lazy(() => import('./pages/StoryPage.jsx'));
-const Faculty = lazy(() => import('./pages/Faculty.jsx'));
-const Toppers = lazy(() => import('./pages/Toppers.jsx'));
-const Contact = lazy(() => import('./pages/Contact.jsx'));
-const Install = lazy(() => import('./pages/Install.jsx'));
-const Privacy = lazy(() => import('./pages/Privacy.jsx'));
-const Terms = lazy(() => import('./pages/Terms.jsx'));
+
+/* Slow/flaky mobile data can drop a page-chunk fetch mid-flight: the
+   browser then throws "Failed to fetch dynamically imported module"
+   and the error boundary shows a dead-end screen — even though the
+   chunk file itself is fine and a retry succeeds. So every lazy page
+   import retries a few times first: the user sees "Loading…" a moment
+   longer instead of an error. If the retries still fail (e.g. a deploy
+   replaced the chunk file, so this bundle is stale), the error
+   boundary below reloads once for a fresh bundle. */
+function lazyRetry(importFn, attempts = 3, delayMs = 900) {
+  return importFn().catch((err) => {
+    if (attempts <= 1) throw err;
+    return new Promise((resolve) => setTimeout(resolve, delayMs))
+      .then(() => lazyRetry(importFn, attempts - 1, delayMs));
+  });
+}
+const lazyPage = (importFn) => lazy(() => lazyRetry(importFn));
+
+/* A failed page-chunk fetch means either a dropped connection or a
+   stale bundle after a deploy. Reloading once fetches a fresh bundle;
+   the 60s guard stops a reload loop if the file is genuinely missing. */
+function maybeReloadForChunkError(error) {
+  const msg = String((error && error.message) || error || '');
+  if (!/dynamically imported module|loading chunk|chunkloaderror|failed to fetch/i.test(msg)) return false;
+  try {
+    const last = Number(sessionStorage.getItem('bcp_chunk_reload') || 0);
+    if (Date.now() - last < 60000) return false;
+    sessionStorage.setItem('bcp_chunk_reload', String(Date.now()));
+  } catch { return false; }
+  window.location.reload();
+  return true;
+}
+
+const About = lazyPage(() => import('./pages/About.jsx'));
+const Programs = lazyPage(() => import('./pages/Programs.jsx'));
+const Admissions = lazyPage(() => import('./pages/Admissions.jsx'));
+const News = lazyPage(() => import('./pages/News.jsx'));
+const NewsPost = lazyPage(() => import('./pages/NewsPost.jsx'));
+const Results = lazyPage(() => import('./pages/Results.jsx'));
+const Material = lazyPage(() => import('./pages/Material.jsx'));
+const Books = lazyPage(() => import('./pages/Books.jsx'));
+const PastPapers = lazyPage(() => import('./pages/PastPapers.jsx'));
+const BookReader = lazyPage(() => import('./pages/BookReader.jsx'));
+const Mcqs = lazyPage(() => import('./pages/Mcqs.jsx'));
+const Notes = lazyPage(() => import('./pages/Notes.jsx'));
+const Courses = lazyPage(() => import('./pages/Courses.jsx'));
+const CourseView = lazyPage(() => import('./pages/CourseView.jsx'));
+const Gallery = lazyPage(() => import('./pages/Gallery.jsx'));
+const StoryPage = lazyPage(() => import('./pages/StoryPage.jsx'));
+const Faculty = lazyPage(() => import('./pages/Faculty.jsx'));
+const Toppers = lazyPage(() => import('./pages/Toppers.jsx'));
+const Contact = lazyPage(() => import('./pages/Contact.jsx'));
+const Install = lazyPage(() => import('./pages/Install.jsx'));
+const Privacy = lazyPage(() => import('./pages/Privacy.jsx'));
+const Terms = lazyPage(() => import('./pages/Terms.jsx'));
 import Developer from './pages/Developer.jsx';
 import { LangProvider, LANGS, storedLang } from './i18n/LangContext.jsx';
 import { CollegeProvider, CollegeNotFoundPage, useCollege } from './college/CollegeContext.jsx';
 import { DEFAULT_COLLEGE_SLUG, getLocalCollege } from './data/colleges.js';
 import { ADMIN_PANEL_PATH } from './config.js';
 
-const AdminApp = lazy(() => import('./admin/AdminApp.jsx'));
+const AdminApp = lazyPage(() => import('./admin/AdminApp.jsx'));
 
 /* Offline bar: when the phone loses internet, say so plainly — the page
    still opens (service worker + saved data), but what it shows is the
@@ -174,6 +207,7 @@ function SingleSegRoute() {
 class AdminErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError() { return { error: true }; }
+  componentDidCatch(error) { console.error(error); maybeReloadForChunkError(error); }
   render() {
     if (this.state.error) {
       return (
@@ -197,7 +231,7 @@ class AdminErrorBoundary extends React.Component {
 class SiteErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(error) { return { error }; }
-  componentDidCatch(error) { console.error(error); }
+  componentDidCatch(error) { console.error(error); maybeReloadForChunkError(error); }
   render() {
     if (this.state.error) {
       return (
