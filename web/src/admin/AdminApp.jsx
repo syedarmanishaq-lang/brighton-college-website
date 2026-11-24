@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   sba, backendReady,
   fetchNews, fetchCourses, fetchResults, fetchMaterial, fetchBooks, fetchGallery, fetchGalleryPhotos, fetchGalleryImages,
-  fetchToppers,
+  fetchToppers, fetchFaculty,
   fetchApplications, markReviewed, adminCreate, adminUpdate, adminDelete,
   adminDeleteWithStorage, uploadImage, MAX_UPLOAD_MB, fetchColleges,
   fetchStorageUsage, STORAGE_QUOTA_BYTES,
@@ -917,6 +917,41 @@ function ToppersSection({ notify }) {
   );
 }
 
+/* Teachers & staff — the `faculty` table (migration 013). The admin
+   sets each person's name, role, subject, field, qualifications
+   (PhD / M.Phil / MS / BS / MA) and a short bio, and uploads a clear
+   portrait photo (R2). The old 107x80 staff thumbnails were blurry and
+   were removed from the site — only the principal's HD portrait stayed.
+   Order 1 is the featured person on the Faculty page. */
+function FacultySection({ notify }) {
+  const [rows, loading, reload] = useRows(() => fetchFaculty());
+  return (
+    <>
+      <div className="alert ok" style={{ marginBottom: 16 }}>
+        💡 Add real teachers &amp; staff only. Fill in the <b>name</b>, <b>role</b> (Lecturer,
+        Principal…), <b>subject</b> they teach, <b>field</b> they lecture in, <b>qualifications</b> (PhD /
+        M.Phil / MS / BS / MA) and a short <b>bio</b> — then upload a <b>clear, well-lit portrait</b>.
+        Blurry photos were removed from the page on purpose, so use a sharp one.
+        <b> Order 1</b> is the featured person on the Faculty page. A row with <b>Published</b> off
+        is hidden from the public page.
+      </div>
+      <Crud title="Faculty & Staff" table="faculty" rows={rows} loading={loading} reload={reload}
+        fileField="photo_url" notify={notify}
+        columns={[
+          { key: 'name', label: 'Name', full: true },
+          { key: 'role', label: 'Role (e.g. Lecturer, Principal)' },
+          { key: 'subject', label: 'Subject (e.g. Physics)' },
+          { key: 'field', label: 'Field (e.g. Pre-Medical)' },
+          { key: 'qualifications', label: 'Qualifications (e.g. M.Phil Physics)' },
+          { key: 'bio', label: 'About / description', type: 'textarea', rows: 3, full: true, hide: true },
+          { key: 'photo_url', label: 'Photo (upload)', type: 'imageupload', bucket: 'faculty', full: true, hide: true },
+          { key: 'display_order', label: 'Order', type: 'number', def: 0 },
+          { key: 'published', label: 'Published (live)', type: 'check', def: true },
+        ]} />
+    </>
+  );
+}
+
 /* Books & past papers manager — the `books` table (textbooks + past
    papers, all boards) is global, not college-scoped. Type is derived
    from the title, same as the public Books/Past Papers pages: titles
@@ -1431,6 +1466,7 @@ const TABS = [
   ['courses', '🎬 Courses'],
   ['results', '📊 Results'],
   ['toppers', '🏆 Toppers'],
+  ['faculty', '👨‍🏫 Faculty'],
   ['material', '📚 Material'],
   ['books', '📖 Books'],
   ['admissions', '📝 Admissions'],
@@ -1548,6 +1584,7 @@ export default function AdminApp() {
         {tab === 'courses' && <CoursesSection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'results' && <ResultsSection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'toppers' && <ToppersSection notify={notify} />}
+        {tab === 'faculty' && <FacultySection notify={notify} />}
         {tab === 'material' && <MaterialSection collegeId={activeCollegeId} notify={notify} />}
         {tab === 'books' && <BooksSection notify={notify} />}
         {tab === 'admissions' && <AdmissionsSection collegeId={activeCollegeId} notify={notify} />}

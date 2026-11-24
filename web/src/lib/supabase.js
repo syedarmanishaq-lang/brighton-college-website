@@ -123,6 +123,13 @@ export const fetchCourseById = (id, collegeId) =>
 export const fetchToppers = () =>
   sba.get('/rest/v1/toppers?select=*&published=eq.true&order=display_order.asc,created_at.desc');
 
+/* ---------- Faculty ---------- */
+/* The `faculty` table is created by migration 013. A request 404s before
+   the migration is run — the Faculty page treats that as "no staff
+   yet" instead of an error. */
+export const fetchFaculty = () =>
+  sba.get('/rest/v1/faculty?select=*&published=eq.true&order=display_order.asc,created_at.desc');
+
 /* ---------- Gallery ---------- */
 export const fetchGallery = (collegeId) =>
   sba.get('/rest/v1/gallery_media?select=*&order=display_order.asc');

@@ -1,0 +1,48 @@
+/* Faculty & Staff — big photos, clean cards, no clutter.
+   Photos are large on purpose (the old 72px circles + 107x80 blurry
+   thumbnails are gone); a teacher without a photo yet gets a large
+   navy initial block in the same shape. Solid navy + gold only, the
+   same language as the rest of the site — no gradients, no extra
+   decoration. */
+.fac-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+@media (max-width: 1100px) { .fac-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .fac-grid { grid-template-columns: 1fr; } }
+
+.fac-card { overflow: hidden; padding: 0; animation: facFade .5s ease both; transition: transform .2s ease, box-shadow .2s ease; }
+.fac-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(10, 28, 51, .14); }
+.fac-card-btn { display: block; width: 100%; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; text-align: left; font: inherit; color: inherit; }
+.fac-photo { display: block; width: 100%; height: 300px; object-fit: cover; object-position: top center; background: var(--navy-100); }
+.fac-photo-fallback { display: flex; align-items: center; justify-content: center; background: var(--navy-900); color: #d9b545; font-family: var(--font-display); font-weight: 800; font-size: 84px; }
+.fac-card-body { padding: 18px 20px 20px; }
+.fac-card-body h3 { margin: 0 0 6px; font-size: 19px; }
+.fac-subject { margin: 8px 0 0; font-weight: 600; color: var(--navy-900); }
+.fac-more { display: inline-block; margin-top: 12px; font-size: 14px; font-weight: 700; color: var(--navy-900); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Featured principal — wide card, photo left, details right. */
+.fac-featured { padding: 0; overflow: hidden; margin-bottom: 8px; }
+.fac-featured-btn { display: grid; grid-template-columns: 300px 1fr; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; text-align: left; font: inherit; color: inherit; }
+@media (max-width: 640px) { .fac-featured-btn { grid-template-columns: 1fr; } }
+.fac-featured .fac-photo { height: 100%; min-height: 300px; }
+.fac-featured-body { padding: 26px 28px; }
+.fac-featured-body h3 { margin: 10px 0 6px; font-size: 26px; }
+.fac-badge { display: inline-block; background: var(--navy-900); color: #d9b545; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; }
+.fac-bio { margin: 12px 0 0; color: var(--muted); line-height: 1.6; }
+
+/* Full-profile modal — the Gallery lightbox backdrop with a white card. */
+.fac-modal { position: relative; width: min(620px, 94vw); max-height: 88vh; overflow-y: auto; background: #fff; border-radius: 16px; box-shadow: 0 30px 80px rgba(0,0,0,.5); text-align: left; cursor: default; }
+.fac-modal .fac-photo { height: 340px; border-radius: 0; box-shadow: none; max-height: none; max-width: none; }
+.fac-modal .fac-photo-fallback { font-size: 110px; }
+.fac-modal-body { padding: 22px 26px 28px; }
+.fac-modal-body h2 { margin: 0 0 6px; font-size: 26px; }
+.fac-modal-body .tag { margin-bottom: 0; }
+.fac-details { margin: 18px 0 0; display: grid; gap: 0; }
+.fac-details > div { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.fac-details dt { font-weight: 700; color: var(--navy-900); }
+.fac-details dd { margin: 0; }
+.fac-modal .lb-close { color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+
+.fac-empty { text-align: center; padding: 48px 24px; }
+.fac-empty-mark { font-size: 52px; }
+
+@keyframes facFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .fac-card { animation: none; } }

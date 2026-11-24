@@ -63,34 +63,6 @@ export const HOUSES = [
   { name: 'Iqbal House', color: 'Green', motto: 'Enlightening Minds, Evoking Self Recognition', namedAfter: 'Allama Iqbal — the Poet of the East, inspiration of the Pakistan Movement.' },
 ];
 
-/* Faculty — from the official prospectus. Photos cropped from the prospectus. */
-export const FACULTY = [
-  { name: 'Mr. Fayoun Khan', title: 'PhD Research Scholar (Urdu)', role: 'Principal', photo: 'fayoun-khan.jpg' },
-  { name: 'Mr. Imranullah', title: 'M.Phil Physics', role: 'Academic Coordinator & Lecturer', photo: 'imranullah.jpg' },
-  { name: 'Mr. M. Idrees', title: 'M.Phil Zoology', role: 'Controller of Examination & Lecturer', photo: 'm-idrees.jpg' },
-  { name: 'Mr. Syed Akif Hussain', title: 'BS Physics', role: 'Lecturer', photo: 'syed-akif-hussain.jpg' },
-  { name: 'Mr. Asad Ali', title: 'M.Phil Chemistry', role: 'Lecturer', photo: 'asad-ali.jpg' },
-  { name: 'Mr. Umar Raheem', title: 'BS Physics', role: 'Lecturer', photo: 'umar-raheem.jpg' },
-  { name: 'Mr. Zakarya Akmal', title: 'M.Phil Chemistry', role: 'Lecturer', photo: 'zakarya-akmal.jpg' },
-  { name: 'Mr. Ihsan Ali', title: 'M.Phil English', role: 'Lecturer', photo: 'ihsan-ali.jpg' },
-  { name: 'Mr. Mudassir Khan', title: 'BS English', role: 'Lecturer', photo: 'mudassir-khan.jpg' },
-  { name: 'Mr. M. Uzair Khalid', title: 'M.Phil Mathematics', role: 'Lecturer', photo: 'm-uzair-khalid.jpg' },
-  { name: 'Miss Nazia Hassan', title: 'MA International Relations', role: 'Section In-Charge (Girls)', photo: 'nazia-hassan.jpg' },
-  { name: 'Mr. M. Ismail', title: 'MA Urdu / Pak Study', role: 'Lecturer', photo: 'm-ismail.jpg' },
-  { name: 'Mr. Dastar Ali', title: 'MA Urdu', role: 'Lecturer', photo: 'dastar-ali.jpg' },
-  { name: 'Mr. Haroon Ur Rasheed', title: 'MA Urdu', role: 'Lecturer', photo: 'haroon-ur-rasheed.jpg' },
-  { name: 'Mufti Sikandar Hayat', title: 'MA Islamiyat / Arabic', role: 'Lecturer', photo: 'sikandar-hayat.jpg' },
-  { name: 'Mufti Zain ul Abideen', title: 'MA Islamiyat / Arabic', role: 'Lecturer', photo: 'zain-ul-abideen.jpg' },
-  { name: 'Mufti M. Sulaiman', title: 'MA Islamiyat & Arabic', role: 'Lecturer', photo: 'm-sulaiman.jpg' },
-  { name: 'Mr. M. Aamir', title: 'M.Phil Mathematics', role: 'Discipline In-Charge & Lecturer', photo: 'm-aamir.jpg' },
-  { name: 'Mr. Ihsanullah', title: 'BS Computer Science', role: 'Lecturer', photo: 'ihsanullah.jpg' },
-  { name: 'Mr. Aman Ali', title: 'M.Phil English', role: 'President BLS & Lecturer', photo: 'aman-ali.jpg' },
-  { name: 'Mr. Saadi Hassan', title: 'BS Computer Science', role: 'Computer Operator', photo: 'saadi-hassan.jpg' },
-  { name: 'Mr. M. Zahid', title: 'MA Urdu', role: 'Clerk', photo: 'm-zahid.jpg' },
-  { name: 'Mr. Abdul Mustan', title: 'FA (Army Rtd.)', role: 'Care Taker', photo: 'abdul-mustan.jpg' },
-  { name: 'Mr. Muhammad Fayaz', title: '', role: 'Physical Instructor', photo: 'muhammad-fayaz.jpg' },
-];
-
 /* Campus facilities — from the official prospectus. */
 export const FACILITIES = [
   { t: 'Smart Classrooms', d: 'Bright, comfortable and well-equipped learning spaces. Multimedia devices are installed in every classroom to assist visual and swift learning.' },
