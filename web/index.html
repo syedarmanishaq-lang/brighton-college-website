@@ -8,27 +8,12 @@
          The script alone shows no ads — ad units / auto ads come after approval. -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4094330852617294"
        crossorigin="anonymous"></script>
-    <!-- Monetag Banner (In-Page Push Banner) — zone 12343664, site 3591003.
-         Replaces In-Page Push zone 12341415 (user order 24 Nov 23:40 —
-         Push bothers users like a notification; banner shows like a
-         native banner on the page instead).
-         The code is pasted EXACTLY as Monetag's "Get tag" gives it
-         (user pasted it 24 Nov 23:45 PKT) and MUST stay static in this
-         file: the React dynamic injection was invisible to Monetag's
-         installation check and no ad rendered. Monetag's own
-         instruction is to paste the code into the html after <head>.
-         Guard: the admin display-ads switch (show_ads) is read from
-         localStorage key bcp_setting_show_ads, which the app persists
-         from Supabase on every visit — 'false' skips the tag. A fresh
-         visitor has no stored value, so the tag loads (default ON);
-         after the admin turns ads off, the switch takes effect from
-         the next visit. NO adult (18+) formats ever. -->
-    <script>
-    (function(){try{
-      if(localStorage.getItem('bcp_setting_show_ads')==='false')return;
-      (function(s){s.dataset.zone='12343664',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
-    }catch(e){}})();
-    </script>
+    <!-- Monetag Banner tag REMOVED by user order 25 Nov 00:13 PKT —
+         the zone rendered notification-style ads like Push, which is
+         what the user wanted gone. No Monetag tag on this page now.
+         Vignette (watch ads on course videos) still lives in
+         CourseView via MonetagVignette.jsx; AdSense loader above
+         stays for the pending site review. -->
     <!-- Theme before first paint: no white flash in dark mode.
          Reads saved choice, else prefers-color-scheme. -->
     <script>
