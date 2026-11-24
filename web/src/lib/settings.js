@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import { backendReady, sba } from './supabase.js';
 import { useCollege } from '../college/CollegeContext.jsx';
+import { CLASS_LEVELS } from '../data/college.js';
 
 const LS_PREFIX = 'bcp_setting_';
 
@@ -28,11 +29,12 @@ const inflight = new Map(); /* `${collegeId}:${key}` -> Promise<string> */
 const freshCache = new Map(); /* `${collegeId}:${key}` -> { at, value } */
 const SETTING_TTL_MS = 60 * 1000;
 
-/* The three switch keys every public page reads (admissions banner,
-   ad slots, rewarded pre-roll). They used to cost 3 separate Supabase
-   requests per page load; one bulk query returns all three at once.
-   Shared single-flight + 60s cache, same as single-key reads. */
-const SWITCH_KEYS = ['admissions_open', 'show_ads', 'rewarded_ads'];
+/* The public keys every public page reads (admissions banner,
+   ad slots, rewarded pre-roll, result class list). They used to cost
+   separate Supabase requests per page load; one bulk query returns
+   them all at once. Shared single-flight + 60s cache, same as
+   single-key reads. */
+const SWITCH_KEYS = ['admissions_open', 'show_ads', 'rewarded_ads', 'result_classes'];
 const bulkInflight = new Map(); /* collegeId -> Promise<object|null> */
 const bulkFresh = new Map(); /* collegeId -> { at, values } */
 
@@ -192,6 +194,25 @@ export function useSiteSetting(key, def) {
 /* Admissions status for the public site. Default = CLOSED (false). */
 export function useAdmissionsOpen() {
   return useSiteSetting('admissions_open', 'false') === 'true';
+}
+
+/* Result class categories (admin-editable). Stored as a JSON list in
+   site_settings key 'result_classes'; default is the old fixed list
+   (11th + 12th), so the public filter is unchanged until the admin
+   edits it. */
+export function parseResultClasses(raw) {
+  try {
+    const list = JSON.parse(raw || '[]');
+    if (Array.isArray(list)) {
+      const clean = list.map((c) => String(c).trim()).filter(Boolean);
+      if (clean.length > 0) return [...new Set(clean)];
+    }
+  } catch {}
+  return [...CLASS_LEVELS];
+}
+export function useResultClasses() {
+  const raw = useSiteSetting('result_classes', JSON.stringify(CLASS_LEVELS));
+  return parseResultClasses(raw);
 }
 
 /* College info fields — admin-editable identity/contact details.

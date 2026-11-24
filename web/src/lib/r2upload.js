@@ -9,6 +9,48 @@ import { MAX_UPLOAD_MB } from './supabase.js';
 
 const PW_KEY = 'brighton_admin_pw'; // SHA-256 hex of the admin password
 
+/* Documents for the Results page: PDF / Word result sheets. The Worker
+   accepts the same types (images stay 5MB, documents 20MB). Some phones
+   send no MIME type, so the extension is the fallback check. */
+const DOC_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
+export const MAX_DOC_MB = 20;
+const isDocFile = (file) => {
+  const type = String(file.type || '');
+  const name = String(file.name || '').toLowerCase();
+  return DOC_TYPES.includes(type)
+    || name.endsWith('.pdf') || name.endsWith('.doc') || name.endsWith('.docx');
+};
+
+/* Shared Worker POST: the caller has already checked type + size. */
+async function postToWorker(file, kind) {
+  const hash = (() => { try { return localStorage.getItem(PW_KEY) || ''; } catch { return ''; } })();
+  if (!hash) throw new Error('Please sign in to the admin panel again, then retry the upload.');
+  const form = new FormData();
+  form.append('file', file);
+  form.append('kind', kind || 'gallery');
+  let r;
+  try {
+    r = await fetch(R2_UPLOAD_URL, {
+      method: 'POST',
+      headers: { 'X-Admin-Hash': hash },
+      body: form,
+    });
+  } catch {
+    throw new Error('Could not reach the upload service. Check your connection and retry.');
+  }
+  let body = null;
+  try { body = await r.json(); } catch { /* fall through */ }
+  if (!r.ok) {
+    throw new Error((body && body.error) || ('Upload failed (' + r.status + ').'));
+  }
+  if (!body || !body.url) throw new Error('Upload finished but no file link came back.');
+  return body.url;
+}
+
 export function driveImageUrl(input) {
   const s = String(input || '').trim();
   if (!s) return null;
@@ -33,26 +75,18 @@ export async function uploadToR2(file, kind) {
   if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
     throw new Error('That file is too big — please choose an image under ' + MAX_UPLOAD_MB + 'MB.');
   }
-  const hash = (() => { try { return localStorage.getItem(PW_KEY) || ''; } catch { return ''; } })();
-  if (!hash) throw new Error('Please sign in to the admin panel again, then retry the upload.');
-  const form = new FormData();
-  form.append('file', file);
-  form.append('kind', kind || 'gallery');
-  let r;
-  try {
-    r = await fetch(R2_UPLOAD_URL, {
-      method: 'POST',
-      headers: { 'X-Admin-Hash': hash },
-      body: form,
-    });
-  } catch {
-    throw new Error('Could not reach the upload service. Check your connection and retry.');
+  return postToWorker(file, kind);
+}
+
+/* Result-sheet documents (PDF / Word) straight to R2 — same Worker,
+   same auth, documents up to 20MB. */
+export async function uploadFileToR2(file, kind) {
+  if (!file) throw new Error('No file selected.');
+  if (!isDocFile(file)) {
+    throw new Error('Only PDF or Word documents are allowed.');
   }
-  let body = null;
-  try { body = await r.json(); } catch { /* fall through */ }
-  if (!r.ok) {
-    throw new Error((body && body.error) || ('Upload failed (' + r.status + ').'));
+  if (file.size > MAX_DOC_MB * 1024 * 1024) {
+    throw new Error('That file is too big — please choose a document under ' + MAX_DOC_MB + 'MB.');
   }
-  if (!body || !body.url) throw new Error('Upload finished but no file link came back.');
-  return body.url;
+  return postToWorker(file, kind);
 }

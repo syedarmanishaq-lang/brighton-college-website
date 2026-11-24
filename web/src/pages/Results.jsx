@@ -4,9 +4,10 @@ import { useCollege, useSite } from '../college/CollegeContext.jsx';
 
 import { fetchResults, backendReady } from '../lib/supabase.js';
 import { isRealCollegeId } from '../lib/settings.js';
+import { useResultClasses } from '../lib/settings.js';
 import { cacheFresh, cacheSet } from '../lib/cache.js';
 import { drivePreviewUrl } from '../lib/drive.js';
-import { CLASS_LEVELS, TEST_TYPES } from '../data/college.js';
+import { TEST_TYPES } from '../data/college.js';
 import Seo from '../seo/Seo.jsx';
 import { ICal } from '../components/icons.jsx';
 
@@ -15,13 +16,38 @@ import { ICal } from '../components/icons.jsx';
    only when the cache is stale. Key uses the college SLUG. */
 const RESULTS_TTL_MS = 5 * 60 * 1000;
 
-/* Renders one result entry: an uploaded result picture, a Drive file
+/* Renders one result entry: an uploaded result picture, an uploaded
+   PDF/Word document (R2/Supabase direct upload), a Drive file
    (document/video/image), or an inline subject-wise marks table stored
    as JSON in result_data. */
+function fileDisplayName(url) {
+  try {
+    const base = decodeURIComponent(String(url || '').split('/').pop().split('?')[0] || '');
+    return base.replace(/^\d+-/, '') || base;
+  } catch { return ''; }
+}
+
 function ResultBody({ r }) {
   if (r.image_url) {
     return <img src={r.image_url} alt={r.title} loading="lazy" decoding="async"
       style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--line)', marginTop: 12 }} />;
+  }
+  if (r.file_url) {
+    const isPdf = /\.pdf($|\?)/i.test(r.file_url);
+    const name = fileDisplayName(r.file_url);
+    return (
+      <div style={{ marginTop: 12 }}>
+        {isPdf && (
+          <div className="video-frame">
+            <iframe src={r.file_url} title={r.title} allowFullScreen />
+          </div>
+        )}
+        <a className="btn btn-outline" href={r.file_url} target="_blank" rel="noreferrer"
+          style={{ marginTop: 10 }}>
+          ⬇ Download {isPdf ? 'PDF' : 'file'}{name ? ' — ' + name : ''}
+        </a>
+      </div>
+    );
   }
   if (r.drive_file_id) {
     const url = drivePreviewUrl(r.drive_file_id);
@@ -59,6 +85,7 @@ function ResultBody({ r }) {
 export default function Results() {
   const { t } = useLang();
   const { college } = useCollege();
+  const classes = useResultClasses();
   const collegeId = college && college.id; /* stable dep (see Courses.jsx) */
   const [items, setItems] = useState(() => cacheFresh(`results:All:All:${(college && college.slug) || 'all'}`, RESULTS_TTL_MS) || []);
   const [cls, setCls] = useState('All');
@@ -94,9 +121,9 @@ export default function Results() {
       <section className="section">
         <div className="container">
           <div className="filters">
-            {['All', ...CLASS_LEVELS].map((c) => (
+            {['All', ...classes].map((c) => (
               <button key={c} className={'chip' + (cls === c ? ' on' : '')} onClick={() => setCls(c)}>
-                {c === 'All' ? 'All Classes' : c + ' Class'}
+                {c === 'All' ? 'All Classes' : c}
               </button>
             ))}
             <span style={{ alignSelf: 'center', color: 'var(--line)' }}>|</span>

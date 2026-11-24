@@ -17,7 +17,7 @@ import { mapCollegeRow } from '../college/CollegeContext.jsx';
 import { getLocalCollege, knownLocalSlugs, DEFAULT_COLLEGE_SLUG } from '../data/colleges.js';
 import { NEWS_CATEGORIES, TEST_TYPES, CLASS_LEVELS, FILE_TYPES, PROGRAMS } from '../data/college.js';
 import { clearDriveCache } from '../lib/drive.js';
-import { uploadToR2, driveImageUrl } from '../lib/r2upload.js';
+import { uploadToR2, uploadFileToR2, MAX_DOC_MB, driveImageUrl } from '../lib/r2upload.js';
 import { getSetting, setSetting, getSettingByKey, setSettingByKey, INFO_FIELDS, getInfoSettings, setInfoSettings } from '../lib/settings.js';
 import { WHATSAPP_NUMBER } from '../config.js';
 
@@ -383,6 +383,84 @@ function ImageUpload({ bucket, value, onChange, label }) {
   );
 }
 
+/* File name shown for an uploaded document — R2 keys are
+   "<timestamp>-<original name>", so the timestamp prefix is stripped
+   for display (the stored URL itself is untouched). */
+function fileDisplayName(url) {
+  try {
+    const base = decodeURIComponent(String(url || '').split('/').pop().split('?')[0] || '');
+    return base.replace(/^\d+-/, '') || base;
+  } catch { return ''; }
+}
+
+/* Document field — PDF / Word result sheets, one stored URL:
+   - R2 (default): uploads through the Cloudflare Worker (PDF/Word up to
+     20MB) — the browser never holds R2 credentials.
+   - Supabase: the original Storage-bucket upload (documents up to 5MB).
+   The stored value is always just a public URL, so the public Results
+   page renders it the same way. */
+function FileUpload({ bucket, value, onChange, label }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [mode, setMode] = useState('r2'); // 'r2' | 'supabase'
+
+  async function pick(e) {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = ''; // allow re-picking the same file
+    if (!f) return;
+    setBusy(true);
+    setMsg('');
+    try {
+      let url;
+      if (mode === 'r2') url = await uploadFileToR2(f, bucket);
+      else {
+        if (f.size > MAX_UPLOAD_MB * 1024 * 1024) {
+          throw new Error('That file is too big — please choose a document under ' + MAX_UPLOAD_MB + 'MB for Supabase (R2 allows ' + MAX_DOC_MB + 'MB).');
+        }
+        url = await uploadImage(bucket, f);
+      }
+      onChange(url);
+      setMsg(mode === 'r2' ? '✅ Uploaded to R2 — document saved.' : '✅ Uploaded — document saved.');
+    } catch (err) {
+      setMsg('⚠️ ' + err.message);
+    }
+    setBusy(false);
+  }
+
+  const name = fileDisplayName(value);
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+        {[['r2', '☁️ R2 upload'], ['supabase', 'Supabase upload']].map(([m, t]) => (
+          <button key={m} type="button" className="chip" onClick={() => { setMode(m); setMsg(''); }}
+            style={mode === m ? { background: 'var(--navy-900)', color: '#fff', borderColor: 'var(--navy-900)' } : undefined}>
+            {t}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <label className="btn btn-outline" style={{ cursor: busy ? 'wait' : 'pointer' }}>
+          {busy ? 'Uploading…' : '📄 Upload PDF / Word'}
+          <input type="file" accept=".pdf,.doc,.docx" hidden disabled={busy} onChange={pick} />
+        </label>
+        {value ? (
+          <a href={value} target="_blank" rel="noreferrer">📄 {name || 'Open file'} ↗</a>
+        ) : (
+          <span className="muted sm">No document yet</span>
+        )}
+      </div>
+      <input value={value || ''} onChange={(e) => onChange(e.target.value)}
+        placeholder="…or paste a document URL" style={{ marginTop: 8 }} />
+      {msg && <div className="sm" style={{ marginTop: 6 }}>{msg}</div>}
+      <div className="muted sm" style={{ marginTop: 4 }}>
+        PDF / Word — {mode === 'r2'
+          ? <>max {MAX_DOC_MB}MB, stored in <b>Cloudflare R2</b> (brighton-college-media).</>
+          : <>max {MAX_UPLOAD_MB}MB, stored in the <b>{bucket}</b> Supabase bucket.</>}
+      </div>
+    </div>
+  );
+}
+
 /* In-app delete confirmation (replaces window.confirm): native browser
    confirms cannot be clicked by automated checks and look rough on
    phones — this modal works the same for humans and automation. */
@@ -521,6 +599,9 @@ function Crud({ title, table, columns, rows, loading, reload, onChanged, college
                         : c.type === 'imageupload'
                           ? <ImageUpload bucket={c.bucket} label={c.label} value={editing[c.key]}
                               onChange={(v) => setEditing({ ...editing, [c.key]: v })} />
+                          : c.type === 'fileupload'
+                            ? <FileUpload bucket={c.bucket} label={c.label} value={editing[c.key]}
+                                onChange={(v) => setEditing({ ...editing, [c.key]: v })} />
                           : c.type === 'marksgrid'
                             ? <MarksGrid value={editing[c.key]}
                                 onChange={(v) => setEditing({ ...editing, [c.key]: v })} />
@@ -677,26 +758,118 @@ function CoursesSection({ collegeId, notify }) {
   );
 }
 
+/* Class categories for results — the admin creates/edits these himself.
+   Stored as a JSON list in site_settings key 'result_classes' (per
+   college); the public Results page reads the same key, so the filter
+   chips always match this list. Default: 11th + 12th (the old fixed
+   list), so nothing changes until he edits it. Each item keeps a stable
+   id (its name when loaded, 'new-…' when just added): renaming a
+   category also renames it on the results already saved under the old
+   name; deleting one only hides it from the filter — its results still
+   show under "All Classes". */
+function ClassCategories({ collegeId, cats, setCats, notify }) {
+  const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  function addDraft() {
+    const name = draft.trim();
+    if (!name) return;
+    if (cats.some((c) => c.name === name)) { setMsg('⚠️ "' + name + '" is already in the list.'); return; }
+    setCats([...cats, { id: 'new-' + Date.now(), name }]);
+    setDraft(''); setMsg('');
+  }
+
+  async function save() {
+    const clean = cats.map((c) => String(c.name).trim()).filter(Boolean);
+    if (clean.length === 0) { setMsg('⚠️ At least one class is needed.'); return; }
+    if (new Set(clean).size !== clean.length) { setMsg('⚠️ Class names must be different from each other.'); return; }
+    setBusy(true); setMsg('');
+    try {
+      for (const c of cats) {
+        const from = String(c.id), to = String(c.name).trim();
+        if (!from || from.startsWith('new-') || !to || from === to) continue;
+        if (!clean.includes(to)) continue;
+        await sba.patch(
+          '/rest/v1/test_results?class_level=eq.' + encodeURIComponent(from)
+          + '&college_id=eq.' + encodeURIComponent(collegeId),
+          { class_level: to });
+      }
+      await setSetting(collegeId, 'result_classes', JSON.stringify(clean));
+      setCats(clean.map((name) => ({ id: name, name })));
+      setMsg('✅ Categories saved.');
+      notify && notify('Class categories saved. ✅');
+    } catch (e) { setMsg('⚠️ Save failed: ' + e.message); }
+    setBusy(false);
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 style={{ marginTop: 0 }}>Class categories</h3>
+      <p className="muted sm" style={{ marginTop: 0 }}>
+        These are the classes on the Results page filter and in the Class
+        dropdown below. Add your own, rename or remove them — renaming
+        also updates the results already saved under the old name.
+      </p>
+      {cats.map((c, i) => (
+        <div key={c.id} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <input value={c.name} onChange={(e) => setCats(cats.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
+            aria-label={'Class ' + (i + 1)} />
+          <button type="button" className="chip chip-danger"
+            onClick={() => setCats(cats.filter((_, j) => j !== i))}>Delete</button>
+        </div>
+      ))}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="New class, e.g. 9th"
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addDraft(); } }} />
+        <button type="button" className="btn btn-outline" onClick={addDraft}>+ Add class</button>
+      </div>
+      <button type="button" className="btn btn-gold" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save categories'}</button>
+      {msg && <div className="sm" style={{ marginTop: 8 }}>{msg}</div>}
+    </div>
+  );
+}
+
 function ResultsSection({ collegeId, notify }) {
   const [rows, loading, reload] = useRows(() => fetchResults({ collegeId }));
+  const [cats, setCats] = useState(() => CLASS_LEVELS.map((name) => ({ id: name, name })));
   useEffect(() => { reload(); }, [collegeId]);
+  useEffect(() => {
+    let live = true;
+    if (!collegeId) return undefined;
+    getSetting(collegeId, 'result_classes', JSON.stringify(CLASS_LEVELS))
+      .then((raw) => {
+        if (!live) return;
+        try {
+          const list = JSON.parse(raw || '[]');
+          if (Array.isArray(list) && list.length > 0) {
+            setCats(list.map((n) => ({ id: String(n), name: String(n) })));
+          }
+        } catch {}
+      }).catch(() => {});
+    return () => { live = false; };
+  }, [collegeId]);
+  const catNames = cats.map((c) => String(c.name).trim()).filter(Boolean);
   return (
     <>
       <div className="alert ok" style={{ marginBottom: 16 }}>
-        💡 Add a result three ways: <b>(1)</b> upload a <b>result picture</b> (photo of the sheet),{' '}
-        <b>(2)</b> paste a <b>Drive file ID</b> (PDF/image of the result sheet), or{' '}
-        <b>(3)</b> leave both empty and enter subject marks in the <b>Marks</b> grid.
+        💡 Add a result four ways: <b>(1)</b> upload a <b>result picture</b> (photo of the sheet),{' '}
+        <b>(2)</b> upload a <b>PDF / Word document</b> straight from your laptop or phone,{' '}
+        <b>(3)</b> paste a <b>Drive file ID</b> (PDF/image of the result sheet), or{' '}
+        <b>(4)</b> leave all three empty and enter subject marks in the <b>Marks</b> grid.
         A result with <b>Published</b> off is a <b>draft</b> — saved, but hidden
         from the public Results page until you turn it on.
       </div>
+      <ClassCategories collegeId={collegeId} cats={cats} setCats={setCats} notify={notify} />
       <Crud title="Test Results" table="test_results" rows={rows} loading={loading} reload={reload} collegeId={collegeId}
         fileField="image_url" notify={notify}
         columns={[
           { key: 'title', label: 'Title', full: true },
-          { key: 'class_level', label: 'Class', type: 'select', opts: CLASS_LEVELS, def: '11th' },
+          { key: 'class_level', label: 'Class', type: 'select', opts: catNames.length ? catNames : CLASS_LEVELS, def: catNames[0] || '11th' },
           { key: 'test_type', label: 'Type', type: 'select', opts: TEST_TYPES, def: 'weekly' },
           { key: 'subject', label: 'Subject', hide: true },
           { key: 'image_url', label: 'Result picture (upload)', type: 'imageupload', bucket: 'results', full: true, hide: true },
+          { key: 'file_url', label: 'Result file — PDF / Word (upload)', type: 'fileupload', bucket: 'results', full: true, hide: true },
           { key: 'drive_file_id', label: 'Drive file ID (optional)', full: true, hide: true },
           { key: 'file_type', label: 'File type', type: 'select', opts: FILE_TYPES, def: 'document', hide: true },
           { key: 'result_data', label: 'Marks', type: 'marksgrid', full: true, hide: true },
