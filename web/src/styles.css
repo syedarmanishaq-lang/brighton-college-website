@@ -360,14 +360,29 @@ html[dir="rtl"] .quote-box { padding: 4px 22px 4px 0; }
 .map-frame { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .map-frame iframe { width: 100%; height: 340px; border: 0; display: block; }
 
-/* ---------- Header nav: burger menu below 1680px ----------
+/* ---------- Header nav: two-row menu on laptop (901–1680px) ----------
    The 14-link nav (~1300px) never fit the old 1140px header container
    at ANY screen width, so laptop/desktop headers overflowed. The header
-   now spans up to 1640px, and below that the burger menu appears.
+   now spans up to 1640px, and below 1680px the burger menu used to appear —
+   so a normal 1366px laptop only ever saw the burger. Now the header goes
+   two rows on laptop widths instead: brand on row 1, the full menu on row 2
+   (scrollable sideways on narrower widths, e.g. long Urdu labels). The
+   burger dropdown only remains on phones/tablets (<=900px). */
+@media (min-width: 901px) and (max-width: 1680px) {
+  .header-inner { flex-wrap: wrap; height: auto; row-gap: 0; }
+  .brand { min-height: 72px; }
+  .nav { display: flex; flex: 1 1 100%; order: 2; flex-wrap: nowrap;
+    overflow-x: auto; scrollbar-width: none;
+    border-top: 1px solid var(--line); padding: 4px 0; }
+  .nav::-webkit-scrollbar { display: none; }
+  .burger { display: none; }
+}
+
+/* ---------- Header nav: burger dropdown on phones/tablets (<=900px) ----------
    The dropdown is capped to the viewport height and scrolls — with the
    sticky header, its bottom items (Gallery, Contact) used to be cut off
    on phones with no way to reach them. */
-@media (max-width: 1680px) {
+@media (max-width: 900px) {
   .nav { display: none; position: absolute; top: 72px; left: 0; right: 0; background: var(--card);
     flex-direction: column; align-items: stretch; padding: 12px 16px 18px;
     border-bottom: 1px solid var(--line); box-shadow: var(--shadow);
