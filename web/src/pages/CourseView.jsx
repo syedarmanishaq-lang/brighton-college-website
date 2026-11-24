@@ -325,6 +325,7 @@ export default function CourseView() {
                         subtitles={subtitles}
                         onEnded={() => handleEnded(watch)}
                         onStreamError={() => setStreamFallback(true)}
+                        onPlaying={() => setStreamFallback(false)}
                       />
                       <div className="course-now-playing">
                         <span className="np-dot" aria-hidden />
@@ -333,6 +334,9 @@ export default function CourseView() {
                       </div>
                       </>
                       )}
+                      {/* Drive preview = backup ONLY: shows when our player errors,
+                          hides again as soon as our player plays (onPlaying clears it) —
+                          so the video plays on our own player, never two players at once. */}
                       {streamFallback && (
                         <div className="video-frame" style={{ marginTop: 12 }}>
                           <div className="vf-head"><span className="play">▶</span> {watch.name} — Drive preview</div>

@@ -15,6 +15,8 @@ import './VideoPlayer.css';
      onEnded      callback fired when the video finishes
      autoplayNext bool — auto-play when `src` changes (playlist behaviour)
      onStreamError optional — called on <video> error instead of inline error UI
+     onPlaying     optional — called when playback actually starts/resumes
+                   (CourseView uses it to hide the Drive-preview fallback)
      curriculum   optional React node rendered in the "Curriculum" side tab
    ========================================================================== */
 
@@ -72,7 +74,7 @@ const I = {
 };
 
 export default function VideoPlayer(props) {
-  const { src, title, videoId, subtitles, onEnded, autoplayNext, onStreamError, curriculum } = props;
+  const { src, title, videoId, subtitles, onEnded, autoplayNext, onStreamError, onPlaying, curriculum } = props;
   const hasSubs = Array.isArray(subtitles) && subtitles.length > 0;
 
   const videoRef = useRef(null);
@@ -183,7 +185,7 @@ export default function VideoPlayer(props) {
         try { setBufferedPct((v.buffered.end(v.buffered.length - 1) / v.duration) * 100); } catch { /* noop */ }
       }
     };
-    const onPlay = () => { setPlaying(true); setBuffering(false); scheduleHide(); };
+    const onPlay = () => { setPlaying(true); setBuffering(false); scheduleHide(); if (typeof onPlaying === 'function') onPlaying(); };
     const onPause = () => { setPlaying(false); showControls(); savePosition(); };
     const onWaiting = () => setBuffering(true);
     const onCanPlay = () => setBuffering(false);
