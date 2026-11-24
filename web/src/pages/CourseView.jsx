@@ -319,6 +319,7 @@ export default function CourseView() {
                       {watch && (
                       <>
                       <VideoPlayer
+                        key={watch.id}
                         src={driveDownloadUrl(watch.id)}
                         title={cleanVideoName(watch.name)}
                         videoId={watch.id}

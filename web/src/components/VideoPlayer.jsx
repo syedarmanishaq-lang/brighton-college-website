@@ -112,10 +112,17 @@ export default function VideoPlayer(props) {
   const [loop, setLoop] = useState(false);
   const lastTapRef = useRef({ t: 0, x: 0 });
 
+  /* Retry state for transient <video> errors: one dropped range fetch
+     must not kill the lesson (see onErr below). */
+  const errRetry = useRef(0);
+  const errRetryTimer = useRef(null);
+
   /* ------------------------- per-video reset ------------------------- */
   useEffect(() => {
     setPlaying(false); setTime(0); setDuration(0); setBufferedPct(0);
     setError(null); setToast(null); setSpeed(1); setSpeedOpen(false);
+    errRetry.current = 0;
+    if (errRetryTimer.current) { clearTimeout(errRetryTimer.current); errRetryTimer.current = null; }
     setCapIdx(-1); setCues([]); setActiveCue(-1); setNoteText('');
     cueGuard.current = -2;
     if (videoId) {
@@ -161,6 +168,7 @@ export default function VideoPlayer(props) {
     const onLoaded = () => {
       setDuration(v.duration || 0);
       setError(null);
+      errRetry.current = 0;
       applyTrackModes(capIdx);
       // cues can arrive a beat after metadata; try now and once more shortly after
       if (!refreshCues(capIdx)) setTimeout(() => refreshCues(capIdx), 1200);
@@ -195,9 +203,22 @@ export default function VideoPlayer(props) {
       if (typeof onEnded === 'function') onEnded();
     };
     const onErr = () => {
-      if (typeof onStreamError === 'function') { onStreamError(); return; }
+      const v = videoRef.current;
+      /* A single transient error (dropped/slow range fetch) used to kill
+         playback for good: the element stays in error state and play()
+         silently fails on it. Retry the load twice (at once, then after
+         1s) before declaring failure — only then show the Drive preview
+         fallback via onStreamError and the inline Try again button. */
+      if (v && errRetry.current < 2) {
+        errRetry.current += 1;
+        setBuffering(true);
+        const delay = errRetry.current === 1 ? 0 : 1000;
+        errRetryTimer.current = setTimeout(() => { try { v.load(); } catch { /* noop */ } }, delay);
+        return;
+      }
       setError('This video could not be loaded. The file may be private, the link expired, or the network dropped.');
       setBuffering(false);
+      if (typeof onStreamError === 'function') onStreamError();
     };
 
     v.addEventListener('loadedmetadata', onLoaded);
@@ -209,6 +230,7 @@ export default function VideoPlayer(props) {
     v.addEventListener('ended', onEnded);
     v.addEventListener('error', onErr);
     return () => {
+      if (errRetryTimer.current) clearTimeout(errRetryTimer.current);
       v.removeEventListener('loadedmetadata', onLoaded);
       v.removeEventListener('timeupdate', onTime);
       v.removeEventListener('play', onPlay);
@@ -286,10 +308,15 @@ export default function VideoPlayer(props) {
   /* --------------------------- actions ------------------------------- */
   const togglePlay = useCallback(() => {
     const v = videoRef.current;
-    if (!v || error) return;
-    if (v.paused) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+    if (!v) return;
+    if (v.paused) {
+      /* Element stuck in error state: reload before playing, otherwise
+         play() silently fails on the errored element. */
+      if (v.error || v.networkState === 3) { errRetry.current = 0; v.load(); }
+      const p = v.play(); if (p && p.catch) p.catch(() => {});
+    }
     else v.pause();
-  }, [error]);
+  }, []);
 
   const skip = useCallback((secs) => {
     const v = videoRef.current;
@@ -446,6 +473,7 @@ export default function VideoPlayer(props) {
   const retryLoad = useCallback(() => {
     const v = videoRef.current;
     setError(null);
+    errRetry.current = 0;
     if (v) v.load();
   }, []);
 
