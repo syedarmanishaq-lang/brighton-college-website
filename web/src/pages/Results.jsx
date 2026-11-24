@@ -34,12 +34,21 @@ function ResultBody({ r }) {
   }
   if (r.file_url) {
     const isPdf = /\.pdf($|\?)/i.test(r.file_url);
+    const isDoc = /\.(doc|docx)($|\?)/i.test(r.file_url);
     const name = fileDisplayName(r.file_url);
+    /* Phone browsers do not render a PDF/Word file inside an <iframe> —
+       Android Chrome shows only an "Open" box that leaves the site.
+       The Google viewer renders the pages inside the site instead, so
+       the file opens directly on the Results page. Download stays as
+       the fallback. */
+    const viewerUrl = (isPdf || isDoc)
+      ? 'https://docs.google.com/viewer?url=' + encodeURIComponent(r.file_url) + '&embedded=true'
+      : null;
     return (
       <div style={{ marginTop: 12 }}>
-        {isPdf && (
-          <div className="video-frame">
-            <iframe src={r.file_url} title={r.title} allowFullScreen />
+        {viewerUrl && (
+          <div className="video-frame pdf-frame">
+            <iframe src={viewerUrl} title={r.title} allowFullScreen />
           </div>
         )}
         <a className="btn btn-outline" href={r.file_url} target="_blank" rel="noreferrer"

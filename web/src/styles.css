@@ -279,6 +279,9 @@ a.list-item:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
 .video-frame .vf-head .play { color: var(--gold-400); font-size: 18px; }
 .video-frame iframe { display: block; width: 100%; aspect-ratio: 16/9; border: 0; background: #000; }
 .video-frame video { display: block; width: 100%; aspect-ratio: 16/9; border: 0; background: #000; }
+/* PDF / Word preview — tall portrait frame so pages read on a phone
+   instead of the wide 16:9 video box. */
+.video-frame.pdf-frame iframe { aspect-ratio: auto; height: 75vh; min-height: 420px; }
 
 /* ---------- Material rows ---------- */
 .mat-row {
