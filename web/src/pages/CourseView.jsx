@@ -9,9 +9,8 @@ import { useCollege, useSite } from '../college/CollegeContext.jsx';
 
 import VideoPlayer from '../components/VideoPlayer.jsx';
 import AdSlot from '../components/AdSlot.jsx';
-import RewardedAd from '../components/RewardedAd.jsx';
-import { useRewardedAds, isRealCollegeId } from '../lib/settings.js';
-import { rewardCapReady, markRewardShown, sessionGated, markSessionGated } from '../lib/rewarded.js';
+import MonetagVignette from '../components/MonetagVignette.jsx';
+import { isRealCollegeId } from '../lib/settings.js';
 import { getCourseProgress, markLessonWatched } from '../lib/progress.js';
 import { fetchCourseById, fetchCourses, backendReady } from '../lib/supabase.js';
 import { driveListAll, driveGetFile, drivePreviewUrl, driveDownloadUrl, driveReady, isFolder, cleanCourseName, cleanVideoName, courseThumbFor, courseArtFor } from '../lib/drive.js';
@@ -118,9 +117,6 @@ export default function CourseView() {
   const [watched, setWatched] = useState(new Set());
   const [streamFallback, setStreamFallback] = useState(false);
   const [related, setRelated] = useState([]);
-  /* Rewarded-ad gate: holds the lesson waiting behind the ad interstitial. */
-  const [rewardGate, setRewardGate] = useState(null);
-  const rewardedAdsOn = useRewardedAds();
 
   useEffect(() => {
     /* Wait for the real college UUID before the table lookup: with the
@@ -187,32 +183,16 @@ export default function CourseView() {
 
   function playVideo(v) {
     setWatch(v);
-    setRewardGate(null);
     setStreamFallback(false);
     setTimeout(() => document.getElementById('course-player')
       ?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
   }
 
   function onPlay(v) {
-    /* Rewarded-ad gate: at most one rewarded ad per 10 minutes per user,
-       and never twice for the same video in one session. When the gate
-       is skipped (setting off, cap active, no ad configured) the video
-       just plays — graceful degradation. */
-    if (rewardedAdsOn && rewardCapReady() && !sessionGated(v.id)) {
-      setRewardGate(v);
-      setWatch(null);
-      setTimeout(() => document.getElementById('course-player')
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
-      return;
-    }
-    playVideo(v);
-  }
-
-  function handleRewardComplete() {
-    const v = rewardGate;
-    if (!v) return;
-    markRewardShown();      // starts the 10-minute cap
-    markSessionGated(v.id); // never gate this video again this session
+    /* Watch ad is the Monetag Vignette on this page (MonetagVignette:
+       once per course per session, max once per 10 minutes, gated by
+       the admin rewarded-ads switch) — so videos play at once here.
+       The old placeholder 5s gate is gone: no fake wait. */
     playVideo(v);
   }
 
@@ -327,17 +307,13 @@ export default function CourseView() {
               </div>
             ) : (
               <div className="course-layout">
+                {(rootVideos.length > 0 || folders.length > 0) && (
+                  <MonetagVignette courseId={id} />
+                )}
                 <div>
                   {/* ---------- Custom video player (R5) ---------- */}
-                  {(watch || rewardGate) && (
+                  {watch && (
                     <div id="course-player" style={{ marginBottom: 26 }}>
-                      {rewardGate && !watch && (
-                        <RewardedAd
-                          videoTitle={rewardGate.name}
-                          onComplete={handleRewardComplete}
-                          onClose={() => setRewardGate(null)}
-                        />
-                      )}
                       {watch && (
                       <>
                       <VideoPlayer
