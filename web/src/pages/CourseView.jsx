@@ -190,8 +190,10 @@ export default function CourseView() {
 
   function onPlay(v) {
     /* Watch ad is the Monetag Vignette on this page (MonetagVignette:
-       once per course per session, max once per 10 minutes, gated by
-       the admin rewarded-ads switch) — so videos play at once here.
+       ONE ad per video per session — a different lesson shows a NEW
+       ad, no 10-minute wait (user's order 24 Nov 21:01); re-tapping
+       the same lesson never re-gates. Gated by the admin
+       rewarded-ads switch) — so videos play at once here.
        The old placeholder 5s gate is gone: no fake wait. */
     playVideo(v);
   }
@@ -308,7 +310,7 @@ export default function CourseView() {
             ) : (
               <div className="course-layout">
                 {(rootVideos.length > 0 || folders.length > 0) && (
-                  <MonetagVignette courseId={id} />
+                  <MonetagVignette videoId={watch?.id} />
                 )}
                 <div>
                   {/* ---------- Custom video player (R5) ---------- */}
