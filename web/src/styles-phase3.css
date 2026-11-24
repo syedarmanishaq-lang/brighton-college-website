@@ -158,21 +158,6 @@ h3 svg, h4 svg, .alert svg { vertical-align: -3px; margin-inline-end: 6px; }
   border-inline-start: 2px solid var(--gold-500);
 }
 
-/* ---------- Persistent gold Apply rail (R2) ---------- */
-.apply-rail {
-  position: fixed; inset-inline-end: 0; top: 38%; z-index: 55;
-  writing-mode: vertical-rl; text-orientation: mixed;
-  background: linear-gradient(180deg, var(--gold-400), var(--gold));
-  color: #231a02; font-weight: 800; font-size: 14px; letter-spacing: 1.5px;
-  padding: 22px 12px; border-radius: 12px 0 0 12px; text-decoration: none;
-  box-shadow: -6px 8px 24px rgba(201,162,39,.35);
-  transition: transform .18s ease;
-}
-html[dir="rtl"] .apply-rail { border-radius: 0 12px 12px 0; box-shadow: 6px 8px 24px rgba(201,162,39,.35); }
-.apply-rail:hover { transform: translateX(-4px); }
-html[dir="rtl"] .apply-rail:hover { transform: translateX(4px); }
-@media (max-width: 900px) { .apply-rail { display: none; } }
-
 /* ---------- Stats band with animated counters (R3) ---------- */
 .stats-band { background: var(--navy); color: #fff; padding: 46px 0; border-top: 1px solid rgba(201,162,39,.25); }
 .stats-band-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }

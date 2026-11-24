@@ -3,7 +3,6 @@ import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import Header from './components/Header.jsx';
 import Footer from './components/Footer.jsx';
 import AdSlot from './components/AdSlot.jsx';
-import ApplyRail from './components/ApplyRail.jsx';
 import BackToTop from './components/BackToTop.jsx';
 /* Route-level code splitting: only Home ships in the first bundle.
    Every other page loads as its own chunk when the user navigates to
@@ -99,7 +98,6 @@ function SiteChrome() {
       </main>
       <div className="container"><AdSlot id="above-footer" format="leaderboard" /></div>
       <Footer />
-      <ApplyRail />
       <BackToTop />
     </>
   );
